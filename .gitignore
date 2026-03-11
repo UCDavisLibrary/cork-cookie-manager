@@ -1,0 +1,8 @@
+node_modules/
+app/node_modules/
+src/node_modules/
+app/public/dist/
+.env
+secrets/
+.vscode
+.DS_Store
