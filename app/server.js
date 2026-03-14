@@ -10,7 +10,7 @@ const server = httpServer.createServer({
   autoIndex: true
 });
 
-const PORT = 7000;
+const PORT = 8080;
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running at http://localhost:${PORT}/`);
