@@ -1,0 +1,9 @@
+{
+  "name": "cork-cookie-manager",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix app run watch",
+    "serve": "npm --prefix app run serve",
+    "dist": "npm --prefix app run dist"
+  }
+}
