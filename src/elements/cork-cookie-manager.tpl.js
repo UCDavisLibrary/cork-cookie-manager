@@ -1,8 +1,8 @@
 import {html, css} from 'lit';
-import baseStyles from "@ucd-lib/theme-sass/1_base_html/_index.css.js";
+import baseStyles from '@ucd-lib/theme-sass/1_base_html/_index.css.js';
 import baseClassStyles from '@ucd-lib/theme-sass/2_base_class/_index.css.js';
 import objectsStyles from '@ucd-lib/theme-sass/3_objects/_index.css.js';
-import componentStyles from "@ucd-lib/theme-sass/4_component/_index.css.js";
+import componentStyles from '@ucd-lib/theme-sass/4_component/_index.css.js';
 import layoutStyles from '@ucd-lib/theme-sass/5_layout/_index.css.js';
 import utilityStyles from '@ucd-lib/theme-sass/6_utility/_index.css.js';
 

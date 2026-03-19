@@ -54,7 +54,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
                 name = cookie.trim();
                 value = '';
             } else {
-                // Handle case where name might contain '=' characters
+                // Split on the first '=' character to allow for '=' in the cookie value
                 name = cookie.slice(0,separatorIndex).trim();
                 value = cookie.slice(separatorIndex + 1).trim();
                 }
@@ -79,8 +79,8 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
  
  connectedCallback() {
-    this.getCookies();
     super.connectedCallback();
+    this.getCookies();
   }
 
 }
