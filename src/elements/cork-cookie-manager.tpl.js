@@ -39,7 +39,7 @@ export function render() {
         <h1>Cookies</h1>
 
         <div class="responsive-table" role="region" aria-label="Scrollable Table" tabindex="0">
-            <table class="table--admin">
+            <table class="table--bordered">
                 <thead>
                     <tr>
                         <th class="center-container">Delete?</th>
