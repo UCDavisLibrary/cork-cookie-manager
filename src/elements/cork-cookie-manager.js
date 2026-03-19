@@ -12,6 +12,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
         groupRules: {type: Array, attribute: 'group-rules'},
         parentDomain: {type: String, attribute: 'parent-domain'},
         config: {type: Object},
+        cookies: {type: Array},
     }
   }
 
@@ -35,17 +36,39 @@ export default class CorkCookieManager extends Mixin(LitElement)
    * To manage HttpOnly cookies, you would need to do so from the server side by sending appropriate Set-Cookie headers.
    */
   getCookies() {
-    let allCookies = document.cookie;
-    const ca = allCookies.split(';');
-    const cookies = ca.map(cookie => {
-        const [name, value] = cookie.split('=').map(c => c.trim());
-        return { name:name, value:value, valueLength: value.length };
-    });
-    this.cookies = cookies;
+    const allCookies = document.cookie || '';
+
+    // no cookies, return empty array
+    if (!allCookies) {
+        this.cookies = [];
+        return;
+    }
+    const ca = allCookies.split(';')
+        .map(cookie => cookie.trim())
+        .filter(cookie => cookie.length > 0)
+        .map(cookie => {
+            const separatorIndex = cookie.indexOf('=');
+            let name, value;
+            if (separatorIndex === -1) {
+                // Handle case where cookie string does not contain '=' character
+                name = cookie.trim();
+                value = '';
+            } else {
+                // Handle case where name might contain '=' characters
+                name = cookie.slice(0,separatorIndex).trim();
+                value = cookie.slice(separatorIndex + 1).trim();
+                }
+
+            const safeValue = value != null ? value : '';
+            return { name, value: safeValue, valueLength: safeValue.length };
+        });
+    this.cookies = ca;
  }
 
   /**
-   * @param {string} cookieName - The name of the cookie to delete
+   * @param {string} cookieName - The name of the cookie to delete 
+   * This is a placeholder function. In a real implementation, you would need to 
+   * specify the cookie's path and domain to ensure it is deleted correctly.*
    * @returns {void}
    * Deletes a cookie by setting its expiration date to a past date. 
    * To delete an HttpOnly cookie, you would need to do so from the server side by sending a Set-Cookie header with an expired date.

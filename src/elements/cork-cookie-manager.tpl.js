@@ -16,6 +16,11 @@ export function styles() {
             justify-content: center; 
             align-items: center;
         }
+        .delete-cookie-button {
+             background-color: #c10230;
+             border: 1px solid red;
+             color: white;
+        }
     `;
 
     return [    
@@ -46,8 +51,12 @@ export function render() {
                     ${this.cookies.map(cookie => 
                         html`
                             <tr>
-                                <td @click=${() => this.deleteCookie(cookie)} class="center-container">      
-                                   <p style="background-color: #c10230; border: 1px solid red; color: white;" class="btn btn--sm">Delete</p>
+                                <td class="center-container">      
+                                   <button 
+                                        @click=${() => this.deleteCookie(cookie)} 
+                                        aria-label=${`Delete cookie ${cookie.name}`}
+                                        class="btn btn--sm delete-cookie-button"
+                                        >Delete</button>
                                 </td>
                                 <td>${cookie.name}</td>
                                 <td>${cookie.valueLength}</td>
