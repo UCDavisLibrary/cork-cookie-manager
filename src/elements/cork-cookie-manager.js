@@ -73,9 +73,9 @@ export default class CorkCookieManager extends Mixin(LitElement)
    * To delete an HttpOnly cookie, you would need to do so from the server side by sending a Set-Cookie header with an expired date.
    * @returns {void}
    */
-//  deleteCookie(cookie) {
-//     console.log(`Deleting cookie: ${cookie.name}`);
-//  }
+ deleteCookie(cookie) {
+    console.log(`Deleting cookie: ${cookie.name}`);
+ }
 
  
  connectedCallback() {

@@ -13,9 +13,8 @@ export function styles() {
             display: block;
         }
         .center-container {
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
+            text-align: center;
+            vertical-align: middle;
         }
         .delete-cookie-button {
              background-color: #c10230;
