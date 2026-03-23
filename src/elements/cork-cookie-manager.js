@@ -67,15 +67,25 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
   /**
    * @param {{name: string}} cookie - Cookie object to act on. Currently only the `name` property is used.
-   * This is a placeholder function and does not actually delete the cookie; it only logs the cookie name.
-   * In a real implementation, you would need to delete the cookie by setting its expiration date to a past date
-   * via `document.cookie`, and specify the cookie's path and domain to ensure it is deleted correctly.
-   * To delete an HttpOnly cookie, you would need to do so from the server side by sending a Set-Cookie header with an expired date.
-   * @returns {void}
+   * This function is triggered when the delete button for a cookie is clicked. 
+   * It retrieves the cookie name from the event's dataset and calls the `performDelete` method 
    */
- deleteCookie(cookie) {
-    console.log(`Deleting cookie: ${cookie.name}`);
- }
+    deleteCookie(e) {
+        const cookieName = e.target.dataset.cookieName;
+        this.performDelete(cookieName);
+    }
+
+    /**
+     * @param {string} cookieName - The name of the cookie to delete.
+     * This is a placeholder function that simulates the deletion of a cookie by logging its name.
+     * In a real implementation, you would need to delete the cookie by setting its expiration date to a past date
+     * via `document.cookie`, and specify the cookie's path and domain to ensure it is deleted correctly.
+     */
+    performDelete(cookieName) {
+        console.log(`Deleting cookie: ${cookieName}`);
+    }
+
+
 
  
  connectedCallback() {

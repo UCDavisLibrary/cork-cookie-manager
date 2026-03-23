@@ -54,7 +54,8 @@ export function render() {
                             <tr>
                                 <td class="center-container">      
                                    <button 
-                                        @click=${() => this.deleteCookie(cookie)} 
+                                        @click=${this.deleteCookie} 
+                                        data-cookie-name="${cookie.name}"
                                         aria-label=${`Delete cookie ${cookie.name}`}
                                         class="btn btn--sm delete-cookie-button"
                                         disabled>Delete</button>
