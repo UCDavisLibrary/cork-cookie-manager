@@ -9,9 +9,8 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
   static get properties() {
     return {
-        groupRules: {type: Array, attribute: 'group-rules'},
+        groupRules: {type: Array, attribute: 'group-rules', reflect: true},
         parentDomain: {type: String, attribute: 'parent-domain'},
-        config: {type: Object},
         cookies: {type: Array},
     }
   }
@@ -24,16 +23,154 @@ export default class CorkCookieManager extends Mixin(LitElement)
     super();
     this.render = render.bind(this);
     this.cookies = [];
-    this.config = {
+    this.defaultGroupRules = [{
         name: "all",
         label: "All non-HttpOnly cookies",
         patterns: [".*"]
-    };
+    }];
+    this.groupRules = structuredClone(this.defaultGroupRules);
+    this._cookieManagerObserver = null;
+    this.parentDomain = "";
   }
+
+
+  /*
+    * Lifecycle method called after the component's DOM has been updated for the first time.
+  */
+  firstUpdated() {
+
+        // Start observing for config changes after the component has been rendered for the first time
+        this._setupGroupRulesObserver();
+
+        // Initial sync of group rules from cookie manager content
+        this._syncGroupRules();  
+
+        console.log("Group Rules:", this.groupRules || "No group rules provided");
+        console.log("Parent Domain:", this.parentDomain || "No parent domain provided"); 
+        this.getCookies();  
+
+  }
+
+  /**
+   * @description Sets up a MutationObserver to watch for changes to the cookie manager's content
+   * @returns {void}
+  */
+  _setupGroupRulesObserver() {  
+    const cookieManager = this;
+
+    this._cookieManagerObserver = new MutationObserver((mutations) => {
+        let shouldSync = false;
+
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                shouldSync = true;
+                break;
+            }
+
+            if (mutation.type === 'attributes' &&
+                mutation.attributeName === 'group-rules') {
+                shouldSync = true;
+                break;
+            }
+
+            if (mutation.type === 'characterData') {
+                shouldSync = true;
+                break;
+            }
+        }
+
+        if(shouldSync) {
+            this._syncGroupRules();
+        }
+    });
+
+    this._cookieManagerObserver.observe(cookieManager, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true,
+        attributeFilter: ['group-rules']
+    });
+
+  }
+
+
+  /**
+   * @description Synchronizes the `groupRules` property with the current content of the cookie manager. 
+   * It retrieves the group rules from either a JSON script tag or an attribute, validates them, and updates the `groupRules` property if they have changed.
+   * @returns {void}
+  */
+  _syncGroupRules() {
+    const cookieManager = this;
+
+    const resolvedRules = this._getGroupRulesFromCookieManager(cookieManager);
+
+    if (!this._groupRulesEqual(this.groupRules, resolvedRules)) {
+        this.groupRules = structuredClone(resolvedRules);
+    }
+  }
+
+ /**
+   * @description Retrieves group rules from the cookie manager's content.
+   * @param {HTMLElement} cookieManager - The cookie manager element to retrieve group rules from.
+   * @returns {Array} An array of group rule objects.
+  */
+  _getGroupRulesFromCookieManager(cookieManager) {
+    // Get group rules from Json inside script tag
+    const scriptTag = cookieManager.querySelector('script[type="application/json"]');
+    if (scriptTag?.textContent?.trim()) {
+        try {
+            const parsedScript = JSON.parse(scriptTag.textContent.trim());
+            const scriptRules = parsedScript?.groupRules;
+
+            const validationResult = this.validateGroupRules(scriptRules);
+            if (validationResult.valid) {
+                return validationResult.value;
+            }
+
+            console.warn(`Invalid group rules in script JSON: ${validationResult.error}`);
+
+        } catch (e) {
+            console.warn('Failed to parse group rules from cookie manager:', e);
+        }
+    }
+
+    // Fallback to group rules from attribute
+    const groupRulesAttr = cookieManager.getAttribute('group-rules');
+    if (groupRulesAttr) {
+        try {
+            const parsedAttr = JSON.parse(groupRulesAttr);
+
+            const validationResult = this.validateGroupRules(parsedAttr);
+            if (validationResult.valid) {
+                return validationResult.value;
+            }
+
+            console.warn(`Invalid group rules in attribute: ${validationResult.error}`);
+
+        } catch (e) {
+            console.warn('Failed to parse group rules from attribute:', e);
+        }
+    }
+
+    // Return default group rules if no valid rules found
+    return structuredClone(this.defaultGroupRules);
+  }
+
+  /**
+   * @description Checks if two arrays of group rules are equal.
+   * @param {Array} a - The first array of group rules.
+   * @param {Array} b - The second array of group rules.
+   * @returns {boolean} True if the arrays are equal, false otherwise.
+   */
+  _groupRulesEqual(a, b) {
+        return JSON.stringify(a) === JSON.stringify(b);
+   }
 
   /**
    * @description Retrieves all cookies accessible via JavaScript (i.e., non-HttpOnly cookies) and stores them in the `cookies` property. 
    * To manage HttpOnly cookies, you would need to do so from the server side by sending appropriate Set-Cookie headers.
+   * @returns {void}
    */
   getCookies() {
     const allCookies = document.cookie || '';
@@ -85,12 +222,91 @@ export default class CorkCookieManager extends Mixin(LitElement)
         console.log(`Deleting cookie: ${cookieName}`);
     }
 
+    /**
+     * @description Validates the structure and content of group rules. 
+     * @param {*} groupRules 
+     * @returns 
+     */
+    validateGroupRules(groupRules) {
+        let error = null;
+
+        if (!Array.isArray(groupRules)) {
+            return { valid: false, error: 'groupRules must be an array' };
+        }
+
+        groupRules.forEach((rule, index) => {
+            // Skip further validation if an error has already been found
+            if (error) return; 
+
+            // Validate that each rule is an object
+            if (!rule || typeof rule !== 'object') {
+                error = `groupRules[${index}] is not a valid object`;
+                return;
+            }
+
+            // Validate that name is a non-empty string
+            if (typeof rule.name !== 'string' || !rule.name.trim()) {
+                error = `groupRules[${index}].name must be a string`;
+                return;
+            }
+
+            // Validate that label is a non-empty string
+            if (typeof rule.label !== 'string' || !rule.label.trim()) {
+                error = `groupRules[${index}].label must be a string`;
+                return;
+            }
+            
+            // Validate that patterns is an array of valid regular expression strings
+            if (!Array.isArray(rule.patterns)) {
+                error = `groupRules[${index}].patterns must be an array`;
+                return;
+            }
+
+            rule.patterns.forEach((pattern, patternIndex) => {
+                // Skip further validation if an error has already been found
+                if (error) return;
+
+                if (typeof pattern !== 'string') {
+                    error = `groupRules[${index}].patterns[${patternIndex}] must be a string`;
+                    return;
+                }
+
+                try {
+                    new RegExp(pattern);
+                } catch (e) {
+                    error = `groupRules[${index}].patterns[${patternIndex}] is not a valid regular expression: ${e.message}`;
+                    return;
+                }
+            });
+        });
+
+        if (error) {
+            return { valid: false, error };
+        }
+
+        return { valid: true, value: groupRules };
+
+    }
+
+
+    /**
+     * @description Lifecycle method called when the component is added to the DOM. It calls the `getCookies` method to retrieve and display the current cookies.
+     * @returns {void}
+    */
+    connectedCallback() {
+        super.connectedCallback();
+    }
 
 
  
- connectedCallback() {
-    super.connectedCallback();
-    this.getCookies();
+
+    disconnectedCallback() {
+        super.disconnectedCallback();
+
+        if (this._cookieManagerObserver) {
+            this._cookieManagerObserver.disconnect();
+            this._cookieManagerObserver = null;
+        }
   }
 
 }

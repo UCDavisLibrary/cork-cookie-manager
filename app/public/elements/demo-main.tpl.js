@@ -46,7 +46,24 @@ export function render() {
         </ucd-theme-search-popup>
 
     </ucd-theme-header>
-    <cork-cookie-manager></cork-cookie-manager>
+    <cork-cookie-manager group-rules="${JSON.stringify(this.groupRules)}" parent-domain="${this.parentDomain}">
+      <script type="application/json">
+        {
+        "groupRules": [
+            {
+            "name": "googleAnalytics",
+            "label": "Google Analytics",
+            "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
+            },
+            {
+            "name": "scriptOther",
+            "label": "Other",
+            "patterns": [".*"]
+            }
+        ]
+        }
+    </script>
+    </cork-cookie-manager>
 
         
     `;
