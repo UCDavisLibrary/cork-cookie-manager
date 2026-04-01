@@ -38,12 +38,12 @@ export default class DemoMain extends Mixin(LitElement)
     //       "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
     //     },
     //     {
-    //       "name": "propertyeOther",
+    //       "name": "propertyOther",
     //       "label": "Other",
     //       "patterns": [".*"]
     //     }
     //   ];
-    // this.parentDomain = "example.com";
+    this.parentDomain = "example.com";
 
   }
 

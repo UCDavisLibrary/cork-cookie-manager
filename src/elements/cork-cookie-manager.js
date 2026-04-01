@@ -38,16 +38,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
     * Lifecycle method called after the component's DOM has been updated for the first time.
   */
   firstUpdated() {
-
-        // Start observing for config changes after the component has been rendered for the first time
-        this._setupGroupRulesObserver();
-
-        // Initial sync of group rules from cookie manager content
-        this._syncGroupRules();  
-
-        // Initial retrieval of cookies after the component has been rendered
-        this.getCookies();  
-
+        this.runCookieManager();
   }
 
   /**
@@ -93,6 +84,34 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
   }
 
+
+  updated(changedProperties) {
+    super.updated(changedProperties);
+
+    // If groupRules property has changed, sync it with the cookie manager content
+    if (changedProperties.has('groupRules')) {
+        this._syncGroupRules();
+    }
+  }
+
+  /**
+   * @description Initializes the cookie manager by setting up the MutationObserver to watch for changes in the cookie manager's content 
+   * and performs sync 
+   * @returns {void}
+   */
+  runCookieManager() {
+    
+    if (!this._cookieManagerObserver) {
+        // Start observing for config changes after the component has been rendered for the first time
+        this._setupGroupRulesObserver();
+
+        // Initial sync of group rules from cookie manager content
+        this._syncGroupRules();  
+
+        // Initial retrieval of cookies after the component has been rendered
+        this.getCookies();  
+    }
+  }
 
   /**
    * @description Synchronizes the `groupRules` property with the current content of the cookie manager. 
@@ -305,6 +324,9 @@ export default class CorkCookieManager extends Mixin(LitElement)
     */
     connectedCallback() {
         super.connectedCallback();
+
+        // Ensure the observer and cookie state are initialized whenever the element is (re)attached.
+        this.runCookieManager();
     }
 
 
