@@ -124,7 +124,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
     const resolvedRules = this._getGroupRulesFromCookieManager(cookieManager);
 
     if (!this._groupRulesEqual(this.groupRules, resolvedRules)) {
-        this.groupRules = structuredClone(resolvedRules);
+        this.groupRules = this._cloneGroupRules(resolvedRules);
     }
   }
 
@@ -183,7 +183,30 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
 
     // Return default group rules if no valid rules found
-    return structuredClone(this.defaultGroupRules);
+    return this.defaultGroupRules;
+  }
+
+    /**
+   * @description Safely clones the provided group rules, using structuredClone when available
+   * and falling back to JSON-based deep cloning otherwise.
+   * @param {Array} rules - The group rules to clone.
+   * @returns {Array} A cloned copy of the input rules.
+   */
+  _cloneGroupRules(rules) {
+    // Prefer globalThis.structuredClone if available
+    try {
+      if (typeof globalThis !== 'undefined' && typeof globalThis.structuredClone === 'function') {
+        return globalThis.structuredClone(rules);
+      }
+    } catch (e) {
+      // Fall through to other strategies
+    }
+    // Fallback to bare structuredClone if defined in the global scope
+    if (typeof structuredClone === 'function') {
+      return structuredClone(rules);
+    }
+    // Last-resort deep clone for plain data (arrays/objects)
+    return JSON.parse(JSON.stringify(rules));
   }
 
   /**
@@ -253,8 +276,8 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
     /**
      * @description Validates the structure and content of group rules. 
-     * @param {*} groupRules 
-     * @returns 
+     * @param {Array} groupRules - The group rules to validate.
+     * @returns {Object} An object containing a `valid` boolean and either a `value` with the validated group rules or an `error` message if validation fails.
      */
     validateGroupRules(groupRules) {
         let error = null;
@@ -327,6 +350,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
         // Ensure the observer and cookie state are initialized whenever the element is (re)attached.
         this.runCookieManager();
+        console.log('Group rules on connect:', this.groupRules);
     }
 
 
