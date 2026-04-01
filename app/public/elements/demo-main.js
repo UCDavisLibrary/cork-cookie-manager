@@ -19,19 +19,31 @@ export default class DemoMain extends Mixin(LitElement)
   constructor() {
     super();
     this.render = render.bind(this);
-    this.groupRules = [
-        {
-          "name": "googleAnalytics",
-          "label": "Google Analytics",
-          "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
-        },
-        {
-          "name": "attributeOther",
-          "label": "Other",
-          "patterns": [".*"]
-        }
-      ];
-    this.parentDomain = "example.com";
+    // this.groupRules = [
+    //     {
+    //       "name": "googleAnalytics",
+    //       "label": "Google Analytics",
+    //       "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
+    //     },
+    //     {
+    //       "name": "attributeOther",
+    //       "label": "Other",
+    //       "patterns": [".*"]
+    //     }
+    //   ];
+    // this.groupRulesProp = [
+    //     {
+    //       "name": "googleAnalytics",
+    //       "label": "Google Analytics",
+    //       "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
+    //     },
+    //     {
+    //       "name": "propertyeOther",
+    //       "label": "Other",
+    //       "patterns": [".*"]
+    //     }
+    //   ];
+    // this.parentDomain = "example.com";
 
   }
 

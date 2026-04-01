@@ -9,7 +9,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
   static get properties() {
     return {
-        groupRules: {type: Array, attribute: 'group-rules', reflect: true},
+        groupRules: {type: Array, attribute: 'group-rules'},
         parentDomain: {type: String, attribute: 'parent-domain'},
         cookies: {type: Array},
     }
@@ -28,7 +28,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
         label: "All non-HttpOnly cookies",
         patterns: [".*"]
     }];
-    this.groupRules = structuredClone(this.defaultGroupRules);
+    this.groupRules = null;
     this._cookieManagerObserver = null;
     this.parentDomain = "";
   }
@@ -45,8 +45,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
         // Initial sync of group rules from cookie manager content
         this._syncGroupRules();  
 
-        console.log("Group Rules:", this.groupRules || "No group rules provided");
-        console.log("Parent Domain:", this.parentDomain || "No parent domain provided"); 
+        // Initial retrieval of cookies after the component has been rendered
         this.getCookies();  
 
   }
@@ -152,6 +151,17 @@ export default class CorkCookieManager extends Mixin(LitElement)
             console.warn('Failed to parse group rules from attribute:', e);
         }
     }
+
+    // If group rules are already set on the component, validate and use them
+    if (this.groupRules != null) {
+        const propertyValidation = this.validateGroupRules(this.groupRules);
+        if (propertyValidation.valid) {
+            return propertyValidation.value;
+        }
+
+        console.warn(`Invalid group rules in property: ${propertyValidation.error}`);
+    }
+
 
     // Return default group rules if no valid rules found
     return structuredClone(this.defaultGroupRules);
@@ -290,7 +300,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
 
     /**
-     * @description Lifecycle method called when the component is added to the DOM. It calls the `getCookies` method to retrieve and display the current cookies.
+     * @description Lifecycle method called when the component is added to the DOM. It calls the `connectedCallback` of the parent class to ensure proper lifecycle management.
      * @returns {void}
     */
     connectedCallback() {
@@ -299,7 +309,10 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
 
  
-
+    /**
+     * @description Lifecycle method called when the component is removed from the DOM. It disconnects the MutationObserver to prevent memory leaks and calls the `disconnectedCallback` of the parent class.
+     * @returns {void}
+    */
     disconnectedCallback() {
         super.disconnectedCallback();
 
