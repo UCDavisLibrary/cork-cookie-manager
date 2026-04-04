@@ -33,6 +33,35 @@ export default class CorkCookieManager extends Mixin(LitElement)
     this.parentDomain = "";
   }
 
+/**** This section is to test the deletion button for cookies and groups and will be removed in the future */
+
+createTestCookies() {
+  const parentDomain = this.parentDomain || this._getParentDomain();
+  console.log('Creating test cookies with parent domain:', parentDomain);
+
+  // --- Host-only cookies (no domain) ---
+  document.cookie = "test_host_1=abc; path=/";
+  document.cookie = "test_host_2=123; path=/";
+
+  // --- Parent-domain cookies ---
+  if (parentDomain) {
+    console.log('Creating parent-domain cookies with domain:', parentDomain);
+    document.cookie = `test_parent_1=abc; path=/; domain=${parentDomain};`;
+    document.cookie = `test_parent_2=123; path=/; domain=${parentDomain};`;
+    document.cookie = `test_hard_cookie=abc; path=/; domain=${parentDomain};`;
+  }
+
+  // --- Mixed / realistic cookies ---
+  document.cookie = "session_test_cookie=xyz; path=/";
+  document.cookie = "analytics_test_cookie=456; path=/";
+
+  // Refresh UI
+  this.getCookies();
+
+  console.log("Test cookies created");
+}
+
+/********************************************************************************************************* */
 
   /*
     * Lifecycle method called after the component's DOM has been updated for the first time.
@@ -226,6 +255,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
    */
   getCookies() {
     const allCookies = document.cookie || '';
+    console.log('Cookies on connect:', allCookies);
 
     // no cookies, return empty array
     if (!allCookies) {
@@ -249,29 +279,111 @@ export default class CorkCookieManager extends Mixin(LitElement)
                 }
 
             const safeValue = value != null ? value : '';
-            return { name, value: safeValue, valueLength: safeValue.length };
+            return { name, value: safeValue, valueLength: safeValue.length, groupLabel: this.checkCookieGroup({name}) };
         });
-    this.cookies = parsedCookies;
+
+    this.cookies = Object.groupBy(parsedCookies, ({ groupLabel }) => groupLabel);
+    console.log('Grouped cookies:', this.cookies);
+    this.requestUpdate();
  }
 
-  /**
-   * @param {{name: string}} cookie - Cookie object to act on. Currently only the `name` property is used.
-   * This function is triggered when the delete button for a cookie is clicked. 
-   * It retrieves the cookie name from the event's dataset and calls the `performDelete` method 
+    /**
+     * @description Retrieves the parent domain of the current page by extracting the last two segments of the hostname.
+     * @returns {string} The parent domain of the current page and deleted across sub domains
+     */
+    getParentDomain() {
+        const host = window.location.hostname;
+
+        // Skip localhost
+        if (host === 'localhost') {
+            return '';
+        }
+
+        // Skip IPv4 addresses
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
+            return '';
+        }
+
+        const parts = host.split('.');
+
+        // Less than 2 parts mean no parent domain to return
+        if (parts.length < 2) {
+            return '';
+        }
+
+        // Return two parts from parent domain
+        return `.${parts.slice(-2).join('.')}`;
+
+    }   
+
+   /**
+     * @description Deletes a cookie by name when the delete button is clicked by calling performDelete 
+     * @param {{name: string}} cookie - Cookie object to act on. Currently only the `name` property is used.
+     * @returns {void}
    */
     deleteCookie(e) {
         const cookieName = e.target.dataset.cookieName;
-        this.performDelete(cookieName);
+        const success = this.performDelete(cookieName);
+
+        if (!success) {
+            console.warn('Some cookies could not be removed (domain/path mismatch or HttpOnly).');
+        }
     }
 
     /**
+     * @description Deletes all cookies in a specified group.
+     * @param {string} groupLabel - The label of the group whose cookies to delete.
+     * @returns {void}
+     */
+    deleteAllCookies(groupLabel) {
+        console.log(`Deleting all cookies in group: ${groupLabel}`);
+        const cookies = this.cookies[groupLabel] || [];
+        const failed = [];
+
+        cookies.forEach(cookie => {
+            const success = this.performDelete(cookie.name);
+            if (!success) {
+                failed.push(cookie.name);
+            }
+        });
+
+        if (failed.length) {
+            console.warn('Some cookies could not be removed (domain/path mismatch or HttpOnly).', failed);
+        }
+
+    }
+
+    /**
+     * @description Deletes a cookie by name and sets the cookie's expiration date to a past date and specify the path and domain to ensure proper deletion.
      * @param {string} cookieName - The name of the cookie to delete.
-     * This is a placeholder function that simulates the deletion of a cookie by logging its name.
-     * In a real implementation, you would need to delete the cookie by setting its expiration date to a past date
-     * via `document.cookie`, and specify the cookie's path and domain to ensure it is deleted correctly.
+     * @returns {boolean} Returns true if the cookie was successfully deleted, false otherwise.
      */
     performDelete(cookieName) {
+        const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
+        const parentDomain = this.parentDomain || this._getParentDomain(); 
+
+          // Attempt deletes
+        document.cookie = `${cookieName}=; expires=${expires}; path=/;`;
+
+        if (parentDomain) {
+            const parentDomainDelete = `${cookieName}=; expires=${expires}; path=/; domain=${parentDomain};`;
+            document.cookie = parentDomainDelete;
+            console.log('Parent-domain delete attempt:', parentDomainDelete);
+        }
+
         console.log(`Deleting cookie: ${cookieName}`);
+        
+        // Refresh the cookie list after deletion
+        this.getCookies();
+
+        const allCookies = Array.isArray(this.cookies)
+            ? this.cookies
+            : Object.values(this.cookies || {}).flat();
+
+        const stillExists = allCookies.some(cookie => cookie.name === cookieName);
+        return !stillExists;
+        
+        
     }
 
     /**
@@ -340,6 +452,22 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
     }
 
+    /**
+     * @description Determines the group label for a given cookie based on the defined group rules
+     * @param {Object} cookie 
+     * @returns {String}
+     */    
+    checkCookieGroup(cookie){
+        for (const groupRule of this.groupRules) {
+            for (const pattern of groupRule.patterns) {
+                const regex = new RegExp(pattern);
+                if (regex.test(cookie.name)) {
+                    return groupRule.label;
+                }
+            }
+        }
+        return "All Cookies"
+    } 
 
     /**
      * @description Lifecycle method called when the component is added to the DOM. It calls the `connectedCallback` of the parent class to ensure proper lifecycle management.
@@ -351,7 +479,10 @@ export default class CorkCookieManager extends Mixin(LitElement)
         // Ensure the observer and cookie state are initialized whenever the element is (re)attached.
         this.runCookieManager();
         console.log('Group rules on connect:', this.groupRules);
+        console.log('Parent domain on connect:', this.parentDomain);
     }
+
+
 
 
  
