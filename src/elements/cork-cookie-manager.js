@@ -255,7 +255,6 @@ createTestCookies() {
    */
   getCookies() {
     const allCookies = document.cookie || '';
-    console.log('Cookies on connect:', allCookies);
 
     // no cookies, return empty array
     if (!allCookies) {
@@ -283,7 +282,6 @@ createTestCookies() {
         });
 
     this.cookies = Object.groupBy(parsedCookies, ({ groupLabel }) => groupLabel);
-    console.log('Grouped cookies:', this.cookies);
     this.requestUpdate();
  }
 
@@ -336,7 +334,6 @@ createTestCookies() {
      * @returns {void}
      */
     deleteAllCookies(groupLabel) {
-        console.log(`Deleting all cookies in group: ${groupLabel}`);
         const cookies = this.cookies[groupLabel] || [];
         const failed = [];
 
@@ -370,8 +367,6 @@ createTestCookies() {
             document.cookie = parentDomainDelete;
             console.log('Parent-domain delete attempt:', parentDomainDelete);
         }
-
-        console.log(`Deleting cookie: ${cookieName}`);
         
         // Refresh the cookie list after deletion
         this.getCookies();
@@ -478,8 +473,6 @@ createTestCookies() {
 
         // Ensure the observer and cookie state are initialized whenever the element is (re)attached.
         this.runCookieManager();
-        console.log('Group rules on connect:', this.groupRules);
-        console.log('Parent domain on connect:', this.parentDomain);
     }
 
 
