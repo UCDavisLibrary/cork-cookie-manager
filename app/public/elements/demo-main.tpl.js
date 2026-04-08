@@ -46,9 +46,7 @@ export function render() {
         </ucd-theme-search-popup>
 
     </ucd-theme-header>
-    <cork-cookie-manager group-rules="${JSON.stringify(this.groupRules)}" parent-domain="${this.parentDomain}">
-
-    </script>
+    <cork-cookie-manager group-rules="${JSON.stringify(this.groupRules)}">
     </cork-cookie-manager>
 
         

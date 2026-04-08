@@ -48,7 +48,7 @@ export default class DemoMain extends Mixin(LitElement)
     //       "patterns": [".*"]
     //     }
     //   ];
-    this.parentDomain = "app.localhost.test";
+    // this.parentDomain = "app.localhost.test";
 
   }
 

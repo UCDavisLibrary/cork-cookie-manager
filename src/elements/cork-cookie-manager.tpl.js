@@ -57,13 +57,18 @@ export function render() {
     return html`
         <h1>Cookies</h1>
 
-        <button @click=${this.createTestCookies}>Create Test Cookies</button>
+        ${this.isDev && html`<button style="margin-bottom:1em;" class="btn btn--lg" @click=${this.createTestCookies}>Create Test Cookies</button>`}
 
-        ${this.cookies ? Object.entries(this.cookies).map(([groupLabel, cookies]) =>
+        ${this.cookies && (
+            Array.isArray(this.cookies)
+                ? this.cookies.length
+                : Object.keys(this.cookies).length
+            )
+            ? Object.entries(this.cookies).map(([groupLabel, cookies]) =>
             html`
                 <div class="groupHeader">
                     <button @click=${() => this.deleteAllCookies(groupLabel)} class="delete-all-btn" aria-label=${`Delete all cookies in group ${groupLabel}`}>
-                        Delete All
+                        Delete Group
                     </button>
                     <ucd-theme-collapse title="${groupLabel}">
                         <div class="responsive-table" role="region" aria-label="Scrollable Table" tabindex="0">

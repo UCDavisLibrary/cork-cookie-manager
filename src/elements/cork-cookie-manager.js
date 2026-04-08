@@ -31,12 +31,13 @@ export default class CorkCookieManager extends Mixin(LitElement)
     this.groupRules = null;
     this._cookieManagerObserver = null;
     this.parentDomain = "";
+    this.isDev = window.location.hostname === 'localhost';
   }
 
 /**** This section is to test the deletion button for cookies and groups and will be removed in the future */
 
 createTestCookies() {
-  const parentDomain = this.parentDomain || this._getParentDomain();
+  const parentDomain = this.parentDomain || this.getParentDomain();
   console.log('Creating test cookies with parent domain:', parentDomain);
 
   // --- Host-only cookies (no domain) ---
@@ -278,10 +279,21 @@ createTestCookies() {
                 }
 
             const safeValue = value != null ? value : '';
-            return { name, value: safeValue, valueLength: safeValue.length, groupLabel: this.checkCookieGroup({name}) };
+            return { name, value: safeValue, valueLength: safeValue.length, ...this.checkCookieGroup({name}) };
         });
 
-    this.cookies = Object.groupBy(parsedCookies, ({ groupLabel }) => groupLabel);
+    this.cookies = parsedCookies.reduce((groups, cookie) => {
+        const { groupLabel } = cookie;
+
+        if (!groups[groupLabel]) {
+            groups[groupLabel] = [];
+        }
+
+        groups[groupLabel].push(cookie);
+        return groups;
+
+    }, {});
+
     this.requestUpdate();
  }
 
@@ -316,15 +328,18 @@ createTestCookies() {
 
    /**
      * @description Deletes a cookie by name when the delete button is clicked by calling performDelete 
-     * @param {{name: string}} cookie - Cookie object to act on. Currently only the `name` property is used.
+     * @param {{name: string}} e - Cookie object to act on. Currently only the `name` property is used.
      * @returns {void}
    */
     deleteCookie(e) {
         const cookieName = e.target.dataset.cookieName;
-        const success = this.performDelete(cookieName);
+        this.performDelete(cookieName);
+        const success = this.refreshCookies(cookieName);
 
         if (!success) {
-            console.warn('Some cookies could not be removed (domain/path mismatch or HttpOnly).');
+            console.warn('Some cookies could not be removed (domain/path mismatch or HttpOnly).', cookieName);
+            // You could implement additional UI feedback here to indicate which cookies failed to delete, in AppStateModel.
+
         }
     }
 
@@ -338,14 +353,19 @@ createTestCookies() {
         const failed = [];
 
         cookies.forEach(cookie => {
-            const success = this.performDelete(cookie.name);
-            if (!success) {
-                failed.push(cookie.name);
-            }
+            this.performDelete(cookie.name);
         });
+
+        const success = this.refreshCookies(cookies.map(cookie => cookie.name));
+        if (!success) {
+            failed.push(...cookies.map(cookie => cookie.name));
+        }
+
 
         if (failed.length) {
             console.warn('Some cookies could not be removed (domain/path mismatch or HttpOnly).', failed);
+            // You could implement additional UI feedback here to indicate which cookies failed to delete, in AppStateModel.
+
         }
 
     }
@@ -357,17 +377,25 @@ createTestCookies() {
      */
     performDelete(cookieName) {
         const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
-        const parentDomain = this.parentDomain || this._getParentDomain(); 
+        const parentDomain = this.parentDomain || this.getParentDomain(); 
 
-          // Attempt deletes
+        //   Attempt deletes
         document.cookie = `${cookieName}=; expires=${expires}; path=/;`;
 
+        // Attempt parent domain delete if parent domain exists
         if (parentDomain) {
             const parentDomainDelete = `${cookieName}=; expires=${expires}; path=/; domain=${parentDomain};`;
             document.cookie = parentDomainDelete;
             console.log('Parent-domain delete attempt:', parentDomainDelete);
-        }
+        }    
         
+    }
+    /**
+     * @description Refreshes the cookie list after deletion and checks if the specified cookie still exists.
+     * @param {string} cookieNames - The names of the cookies to check for existence after deletion. Can be a single cookie name or an array of cookie names.
+     * @returns {boolean} Returns true if the cookie no longer exists, false if it still exists.
+     */
+    refreshCookies(cookieNames) {
         // Refresh the cookie list after deletion
         this.getCookies();
 
@@ -375,10 +403,9 @@ createTestCookies() {
             ? this.cookies
             : Object.values(this.cookies || {}).flat();
 
-        const stillExists = allCookies.some(cookie => cookie.name === cookieName);
+        const cookieNamesArray = Array.isArray(cookieNames) ? cookieNames : [cookieNames];
+        const stillExists = cookieNamesArray.some(cookieName => allCookies.some(cookie => cookie.name === cookieName));
         return !stillExists;
-        
-        
     }
 
     /**
@@ -457,11 +484,11 @@ createTestCookies() {
             for (const pattern of groupRule.patterns) {
                 const regex = new RegExp(pattern);
                 if (regex.test(cookie.name)) {
-                    return groupRule.label;
+                    return {groupName: groupRule.name, groupLabel: groupRule.label};
                 }
             }
         }
-        return "All Cookies"
+        return {groupName: "all-cookies", groupLabel: "All Cookies"}
     } 
 
     /**
