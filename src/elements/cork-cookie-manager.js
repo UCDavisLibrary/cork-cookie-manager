@@ -4,6 +4,12 @@ import {render, styles} from './cork-cookie-manager.tpl.js';
 import { Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins/index.js';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
+export const rules = [{
+    "name": "googleAnalytics",
+    "label": "Google Analytics",
+    "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
+}];
+ 
 export default class CorkCookieManager extends Mixin(LitElement)
   .with(LitCorkUtils, MainDomElement) {
 
