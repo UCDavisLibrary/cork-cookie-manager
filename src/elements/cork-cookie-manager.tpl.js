@@ -54,18 +54,17 @@ export function styles() {
 }
 
 export function render() {
-    const groupedCookies = this.groupedCookies;
     return html`
         <h1>Cookies</h1>
 
-        ${this.deleteWarning ? html`
-            <div role="alert" style="color:#c10230; border:1px solid #c10230; padding:0.75em 1em; margin-bottom:1em; border-radius:4px;">
-                ⚠️ ${this.deleteWarning}
-            </div>
-        ` : ''}
+        ${this.isDev && html`<button style="margin-bottom:1em;" class="btn btn--lg" @click=${this.createTestCookies}>Create Test Cookies</button>`}
 
-        ${Object.keys(groupedCookies).length
-            ? Object.entries(groupedCookies).map(([groupLabel, cookies]) =>
+        ${this.cookies && (
+            Array.isArray(this.cookies)
+                ? this.cookies.length
+                : Object.keys(this.cookies).length
+            )
+            ? Object.entries(this.cookies).map(([groupLabel, cookies]) =>
             html`
                 <div class="groupHeader">
                     <button @click=${() => this.deleteAllCookies(groupLabel)} class="delete-all-btn" aria-label=${`Delete all cookies in group ${groupLabel}`}>
