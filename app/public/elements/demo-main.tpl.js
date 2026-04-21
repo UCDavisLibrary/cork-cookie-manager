@@ -5,7 +5,6 @@ import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-search-popup/ucd-theme-search-popup.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-search-form/ucd-theme-search-form.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-quick-links/ucd-theme-quick-links.js';
-import '../../../src/elements/cork-cookie-manager.js';
 import { rules } from '../../../src/elements/cork-cookie-manager.js';
 
 import {html, css} from 'lit';
