@@ -18,6 +18,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
         groupRules: {type: Array, attribute: 'group-rules'},
         parentDomain: {type: String, attribute: 'parent-domain'},
         cookies: {type: Array},
+        deleteWarning: {type: String},
     }
   }
 
@@ -36,39 +37,10 @@ export default class CorkCookieManager extends Mixin(LitElement)
     }];
     this.groupRules = null;
     this._cookieManagerObserver = null;
+    this._compiledRules = [];
     this.parentDomain = "";
-    this.isDev = window.location.hostname === 'localhost';
+    this.deleteWarning = "";
   }
-
-/**** This section is to test the deletion button for cookies and groups and will be removed in the future */
-
-createTestCookies() {
-  const parentDomain = this.parentDomain || this.getParentDomain();
-  console.log('Creating test cookies with parent domain:', parentDomain);
-
-  // --- Host-only cookies (no domain) ---
-  document.cookie = "test_host_1=abc; path=/";
-  document.cookie = "test_host_2=123; path=/";
-
-  // --- Parent-domain cookies ---
-  if (parentDomain) {
-    console.log('Creating parent-domain cookies with domain:', parentDomain);
-    document.cookie = `test_parent_1=abc; path=/; domain=${parentDomain};`;
-    document.cookie = `test_parent_2=123; path=/; domain=${parentDomain};`;
-    document.cookie = `test_hard_cookie=abc; path=/; domain=${parentDomain};`;
-  }
-
-  // --- Mixed / realistic cookies ---
-  document.cookie = "session_test_cookie=xyz; path=/";
-  document.cookie = "analytics_test_cookie=456; path=/";
-
-  // Refresh UI
-  this.getCookies();
-
-  console.log("Test cookies created");
-}
-
-/********************************************************************************************************* */
 
   /*
     * Lifecycle method called after the component's DOM has been updated for the first time.
@@ -127,6 +99,7 @@ createTestCookies() {
     // If groupRules property has changed, sync it with the cookie manager content
     if (changedProperties.has('groupRules')) {
         this._syncGroupRules();
+        this._compileGroupRules();
     }
   }
 
@@ -161,6 +134,7 @@ createTestCookies() {
 
     if (!this._groupRulesEqual(this.groupRules, resolvedRules)) {
         this.groupRules = this._cloneGroupRules(resolvedRules);
+        this._compileGroupRules();
     }
   }
 
@@ -268,7 +242,7 @@ createTestCookies() {
         this.cookies = [];
         return;
     }
-    const parsedCookies = allCookies.split(';')
+    this.cookies = allCookies.split(';')
         .map(cookie => cookie.trim())
         .filter(cookie => cookie.length > 0)
         .map(cookie => {
@@ -285,23 +259,24 @@ createTestCookies() {
                 }
 
             const safeValue = value != null ? value : '';
-            return { name, value: safeValue, valueLength: safeValue.length, ...this.checkCookieGroup({name}) };
+            return { name, value: safeValue, valueLength: safeValue.length };
         });
-
-    this.cookies = parsedCookies.reduce((groups, cookie) => {
-        const { groupLabel } = cookie;
-
-        if (!groups[groupLabel]) {
-            groups[groupLabel] = [];
-        }
-
-        groups[groupLabel].push(cookie);
-        return groups;
-
-    }, {});
-
-    this.requestUpdate();
  }
+
+    /**
+     * @description Returns cookies grouped by their group label, computed from the current flat cookies list and compiled group rules.
+     * @returns {Object} An object mapping each group label to an array of cookie objects in that group.
+     */
+    get groupedCookies() {
+        return this.cookies.reduce((groups, cookie) => {
+            const { groupLabel } = this.checkCookieGroup(cookie);
+            if (!groups[groupLabel]) {
+                groups[groupLabel] = [];
+            }
+            groups[groupLabel].push(cookie);
+            return groups;
+        }, {});
+    }
 
     /**
      * @description Retrieves the parent domain of the current page by extracting the last two segments of the hostname.
@@ -334,18 +309,17 @@ createTestCookies() {
 
    /**
      * @description Deletes a cookie by name when the delete button is clicked by calling performDelete 
-     * @param {{name: string}} e - Cookie object to act on. Currently only the `name` property is used.
+     * @param {Event} e - The click event. The cookie name is read from `e.target.dataset.cookieName`.
      * @returns {void}
    */
     deleteCookie(e) {
         const cookieName = e.target.dataset.cookieName;
+        this.deleteWarning = '';
         this.performDelete(cookieName);
         const success = this.refreshCookies(cookieName);
 
         if (!success) {
-            console.warn('Some cookies could not be removed (domain/path mismatch or HttpOnly).', cookieName);
-            // You could implement additional UI feedback here to indicate which cookies failed to delete, in AppStateModel.
-
+            this.deleteWarning = `Cookie "${cookieName}" could not be removed. It may be set with a domain or path restriction that prevents client-side deletion.`;
         }
     }
 
@@ -355,31 +329,27 @@ createTestCookies() {
      * @returns {void}
      */
     deleteAllCookies(groupLabel) {
-        const cookies = this.cookies[groupLabel] || [];
-        const failed = [];
+        this.deleteWarning = '';
+        const cookies = this.groupedCookies[groupLabel] || [];
+        const cookieNames = cookies.map(cookie => cookie.name);
 
-        cookies.forEach(cookie => {
-            this.performDelete(cookie.name);
+        cookieNames.forEach(name => {
+            this.performDelete(name);
         });
 
-        const success = this.refreshCookies(cookies.map(cookie => cookie.name));
+        const success = this.refreshCookies(cookieNames);
         if (!success) {
-            failed.push(...cookies.map(cookie => cookie.name));
+            const remaining = cookieNames.filter(name =>
+                this.cookies.some(cookie => cookie.name === name)
+            );
+            this.deleteWarning = `Some cookies could not be removed: ${remaining.join(', ')}. They may be set with a domain or path restriction that prevents client-side deletion.`;
         }
-
-
-        if (failed.length) {
-            console.warn('Some cookies could not be removed (domain/path mismatch or HttpOnly).', failed);
-            // You could implement additional UI feedback here to indicate which cookies failed to delete, in AppStateModel.
-
-        }
-
     }
 
     /**
      * @description Deletes a cookie by name and sets the cookie's expiration date to a past date and specify the path and domain to ensure proper deletion.
      * @param {string} cookieName - The name of the cookie to delete.
-     * @returns {boolean} Returns true if the cookie was successfully deleted, false otherwise.
+     * @returns {void}
      */
     performDelete(cookieName) {
         const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
@@ -405,12 +375,8 @@ createTestCookies() {
         // Refresh the cookie list after deletion
         this.getCookies();
 
-        const allCookies = Array.isArray(this.cookies)
-            ? this.cookies
-            : Object.values(this.cookies || {}).flat();
-
         const cookieNamesArray = Array.isArray(cookieNames) ? cookieNames : [cookieNames];
-        const stillExists = cookieNamesArray.some(cookieName => allCookies.some(cookie => cookie.name === cookieName));
+        const stillExists = cookieNamesArray.some(cookieName => this.cookies.some(cookie => cookie.name === cookieName));
         return !stillExists;
     }
 
@@ -481,21 +447,32 @@ createTestCookies() {
     }
 
     /**
-     * @description Determines the group label for a given cookie based on the defined group rules
+     * @description Precompiles the regular expressions from the current `groupRules` into `_compiledRules` to avoid repeated `RegExp` construction per cookie.
+     * @returns {void}
+     */
+    _compileGroupRules() {
+        this._compiledRules = (this.groupRules || []).map(rule => ({
+            name: rule.name,
+            label: rule.label,
+            regexes: (rule.patterns || []).map(pattern => new RegExp(pattern))
+        }));
+    }
+
+    /**
+     * @description Determines the group name and label for a given cookie based on the precompiled group rules.
      * @param {Object} cookie 
-     * @returns {String}
+     * @returns {{groupName: string, groupLabel: string}}
      */    
     checkCookieGroup(cookie){
-        for (const groupRule of this.groupRules) {
-            for (const pattern of groupRule.patterns) {
-                const regex = new RegExp(pattern);
+        for (const groupRule of this._compiledRules) {
+            for (const regex of groupRule.regexes) {
                 if (regex.test(cookie.name)) {
                     return {groupName: groupRule.name, groupLabel: groupRule.label};
                 }
             }
         }
-        return {groupName: "all-cookies", groupLabel: "All Cookies"}
-    } 
+        return {groupName: this.defaultGroupRules[0].name, groupLabel: this.defaultGroupRules[0].label};
+    }
 
     /**
      * @description Lifecycle method called when the component is added to the DOM. It calls the `connectedCallback` of the parent class to ensure proper lifecycle management.

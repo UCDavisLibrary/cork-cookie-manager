@@ -5,7 +5,6 @@ import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-search-popup/ucd-theme-search-popup.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-search-form/ucd-theme-search-form.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-quick-links/ucd-theme-quick-links.js';
-import '../../../src/elements/cork-cookie-manager.js';
 import { rules } from '../../../src/elements/cork-cookie-manager.js';
 
 import {html, css} from 'lit';
@@ -48,6 +47,7 @@ export function render() {
 
     </ucd-theme-header>
 
+    ${this.isDev ? html`<button style="margin-bottom:1em;" class="btn btn--lg" @click=${this.createTestCookies}>Create Test Cookies</button>` : ''}
 
     <h4>${rules.length} Exported Rule(s):</h4>
     ${rules.map(rule => html`
