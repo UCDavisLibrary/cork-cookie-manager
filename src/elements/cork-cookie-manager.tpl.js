@@ -8,21 +8,44 @@ export function styles() {
         :host {
             display: block;
         }
+
+        .cookie-grid {
+            display: grid;
+            grid-template-columns: auto 1fr .25fr;
+        }
+
+        .grid-header, .grid-row {
+            display: contents;
+        }
+
+        .grid-header > div {
+            font-weight: bold;
+            padding: 12px 8px;
+            border-bottom: 2px solid #ffbf00;
+        }
+
+        .grid-row > div {
+            padding: 12px 8px;
+            min-height: 3.5em; 
+            align-self: center;
+        }
+
         .center-container {
             text-align: center;
-            vertical-align: middle;
         }
+
         .delete-cookie-button {
              background-color: #c10230;
              border: 1px solid red;
              color: white;
+             cursor: pointer;
         }
+
         .groupHeader {
             display: flex;
             align-items: stretch;
             margin-bottom: 1em;
         }
-
         .delete-all-btn {
             flex: 0 0 auto;
             align-self: stretch;
@@ -33,75 +56,64 @@ export function styles() {
             color: white;
             border: 1.5px solid #c10230;
             border-right: none;
-
         }
-
-         .delete-all-btn:hover {
+        .delete-all-btn:hover {
             background-color: white;
             color: #a80025;
         }
-
         ucd-theme-collapse {
             flex: 1 1 auto;
             min-width: 0; 
         }
-            `;
+    `;
 
-    return [    
-        baseStyles,
-        baseClassStyles,
-        elementStyles];
+    return [baseStyles, baseClassStyles, elementStyles];
 }
+
 
 export function render() {
     return html`
         <h1>Cookies</h1>
 
-        ${this.isDev && html`<button style="margin-bottom:1em;" class="btn btn--lg" @click=${this.createTestCookies}>Create Test Cookies</button>`}
+        ${this.isDev ? html`<button style="margin-bottom:1em;" class="btn btn--lg" @click=${this.createTestCookies}>Create Test Cookies</button>`: ''}
 
-        ${this.cookies && (
-            Array.isArray(this.cookies)
-                ? this.cookies.length
-                : Object.keys(this.cookies).length
-            )
-            ? Object.entries(this.cookies).map(([groupLabel, cookies]) =>
-            html`
+        ${this.cookies && (Array.isArray(this.cookies) ? this.cookies.length : Object.keys(this.cookies).length)
+            ? Object.entries(this.cookies).map(([groupLabel, cookies]) => html`
                 <div class="groupHeader">
                     <button @click=${() => this.deleteAllCookies(groupLabel)} class="delete-all-btn" aria-label=${`Delete all cookies in group ${groupLabel}`}>
                         Delete Group
                     </button>
                     <ucd-theme-collapse title="${groupLabel}">
-                        <div class="responsive-table" role="region" aria-label="Scrollable Table" tabindex="0">
-                            <table class="table--bordered">
-                                <thead>
-                                    <tr>
-                                        <th class="center-container">Delete?</th>
-                                        <th>Cookie Name</th>
-                                        <th>Cookie Length</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${cookies.map(cookie => 
-                                        html`
-                                            <tr>
-                                                <td class="center-container">      
-                                                <button 
-                                                        @click=${this.deleteCookie} 
-                                                        data-cookie-name="${cookie.name}"
-                                                        aria-label=${`Delete cookie ${cookie.name}`}
-                                                        class="btn btn--sm delete-cookie-button"
-                                                        >Delete</button>
-                                                </td>
-                                                <td>${cookie.name}</td>
-                                                <td>${cookie.valueLength}</td>
-                                            </tr>`
-                                        )}
-                                </tbody>
-                            </table>
+                        <div class="cookie-grid" role="grid">
+                            <!-- Header -->
+                            <div class="grid-header" role="row">
+                                <div class="center-container" role="columnheader">Delete?</div>
+                                <div role="columnheader">Cookie Name</div>
+                                <div role="columnheader">Cookie Length</div>
+                            </div>
+                            
+                            <!-- Body Rows -->
+                            ${cookies.map(cookie => html`
+                                <div class="grid-row" role="row">
+                                    <div class="center-container" role="gridcell">      
+                                        <button 
+                                            @click=${this.deleteCookie} 
+                                            data-cookie-name="${cookie.name}"
+                                            aria-label=${`Delete cookie ${cookie.name}`}
+                                            class="btn btn--sm delete-cookie-button">
+                                            Delete
+                                        </button>
+                                    </div>
+                                    <div role="gridcell">${cookie.name}</div>
+                                    <div role="gridcell">${cookie.valueLength}</div>
+                                </div>
+                            `)}
                         </div>
                     </ucd-theme-collapse>
                 </div>
-            `
-        ) : html`<p>No cookies found.</p>`}
+            `) 
+            : html`<p>No cookies found.</p>`
+        }
     `;
 }
+

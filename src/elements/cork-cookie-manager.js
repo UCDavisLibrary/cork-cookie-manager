@@ -17,7 +17,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
     return {
         groupRules: {type: Array, attribute: 'group-rules'},
         parentDomain: {type: String, attribute: 'parent-domain'},
-        cookies: {type: Array},
+        cookies: {type: Object},
     }
   }
 
@@ -28,7 +28,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
   constructor() {
     super();
     this.render = render.bind(this);
-    this.cookies = [];
+    this.cookies = {};
     this.defaultGroupRules = [{
         name: "all",
         label: "All non-HttpOnly cookies",
@@ -37,12 +37,16 @@ export default class CorkCookieManager extends Mixin(LitElement)
     this.groupRules = null;
     this._cookieManagerObserver = null;
     this.parentDomain = "";
-    this.isDev = window.location.hostname === 'localhost';
+    this.isDev = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
   }
 
 /**** This section is to test the deletion button for cookies and groups and will be removed in the future */
 
 createTestCookies() {
+  if(!this.isDev) {
+    console.warn('createTestCookies should only be used in development environments');
+    return;
+  }
   const parentDomain = this.parentDomain || this.getParentDomain();
   console.log('Creating test cookies with parent domain:', parentDomain);
 
@@ -265,7 +269,7 @@ createTestCookies() {
 
     // no cookies, return empty array
     if (!allCookies) {
-        this.cookies = [];
+        this.cookies = {};
         return;
     }
     const parsedCookies = allCookies.split(';')
@@ -287,6 +291,7 @@ createTestCookies() {
             const safeValue = value != null ? value : '';
             return { name, value: safeValue, valueLength: safeValue.length, ...this.checkCookieGroup({name}) };
         });
+
 
     this.cookies = parsedCookies.reduce((groups, cookie) => {
         const { groupLabel } = cookie;
@@ -379,7 +384,7 @@ createTestCookies() {
     /**
      * @description Deletes a cookie by name and sets the cookie's expiration date to a past date and specify the path and domain to ensure proper deletion.
      * @param {string} cookieName - The name of the cookie to delete.
-     * @returns {boolean} Returns true if the cookie was successfully deleted, false otherwise.
+     * @returns {void}
      */
     performDelete(cookieName) {
         const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
@@ -494,7 +499,7 @@ createTestCookies() {
                 }
             }
         }
-        return {groupName: "all-cookies", groupLabel: "All Cookies"}
+        return {groupName: "other", groupLabel: "Other"}
     } 
 
     /**
