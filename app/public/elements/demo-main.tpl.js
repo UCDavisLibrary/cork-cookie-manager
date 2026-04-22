@@ -5,7 +5,7 @@ import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-search-popup/ucd-theme-search-popup.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-search-form/ucd-theme-search-form.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-quick-links/ucd-theme-quick-links.js';
-import '../../../src/elements/cork-cookie-manager.js';
+import { rules } from '../../../src/elements/cork-cookie-manager.js';
 
 import {html, css} from 'lit';
 
@@ -46,23 +46,16 @@ export function render() {
         </ucd-theme-search-popup>
 
     </ucd-theme-header>
-    <cork-cookie-manager .groupRules=${this.groupRulesProp} group-rules="${JSON.stringify(this.groupRules)}" parent-domain="${this.parentDomain}">
-      <script type="application/json">
-        {
-        "groupRules": [
-            {
-            "name": "googleAnalytics",
-            "label": "Google Analytics",
-            "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
-            },
-            {
-            "name": "Scriptother",
-            "label": "Other",
-            "patterns": [".*"]
-            }
-        ]
-        }
-    </script>
+
+
+    <h4>${rules.length} Exported Rule(s):</h4>
+    ${rules.map(rule => html`
+        <div>
+            <h5>${rule.label}</h5>
+            <p><strong>Patterns:</strong> ${rule.patterns.join(', ')}</p>
+        </div>
+    `)}
+    <cork-cookie-manager group-rules="${JSON.stringify(this.groupRules)}">
     </cork-cookie-manager>
 
         
