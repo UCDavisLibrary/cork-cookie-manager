@@ -42,6 +42,10 @@ export default class CorkCookieManager extends Mixin(LitElement)
 
 /**** This section is to test the deletion button for cookies and groups and will be removed in the future */
 
+/**
+ * @description Creates test cookies for demonstration purposes. Only in dev environments.
+ * @returns {void}
+ */
 createTestCookies() {
   if(!this.isDev) {
     console.warn('createTestCookies should only be used in development environments');
@@ -499,7 +503,7 @@ createTestCookies() {
                 }
             }
         }
-        return {groupName: "other", groupLabel: "Other"}
+        return {groupName: "all-cookies", groupLabel: "All Cookies"};
     } 
 
     /**
