@@ -37,7 +37,7 @@ export default class CorkCookieManager extends Mixin(LitElement)
     this.groupRules = null;
     this._cookieManagerObserver = null;
     this.parentDomain = "";
-    this.isDev = process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost';
+    this.isDev = globalThis.process?.env?.NODE_ENV === 'development' || window.location.hostname === 'localhost';
   }
 
 /**** This section is to test the deletion button for cookies and groups and will be removed in the future */
@@ -340,6 +340,21 @@ createTestCookies() {
         return `.${parts.slice(-2).join('.')}`;
 
     }   
+    /*
+     * @description Returns the subset of cookie names that are still present in `document.cookie`.
+     * @param {string[]} cookieNames - The cookie names to check.
+     * @returns {string[]}
+     */
+    getRemainingCookieNames(cookieNames) {
+        const existingCookieNames = new Set(
+            document.cookie
+                .split(';')
+                .map(cookie => cookie.trim())
+                .filter(Boolean)
+                .map(cookie => cookie.split('=')[0])
+        );
+        return cookieNames.filter(cookieName => existingCookieNames.has(cookieName));
+    }
 
    /**
      * @description Deletes a cookie by name when the delete button is clicked by calling performDelete 
@@ -347,7 +362,7 @@ createTestCookies() {
      * @returns {void}
    */
     deleteCookie(e) {
-        const cookieName = e.target.dataset.cookieName;
+        const cookieName = e.currentTarget.dataset.cookieName;
         this.performDelete(cookieName);
         const success = this.refreshCookies(cookieName);
 
@@ -363,17 +378,19 @@ createTestCookies() {
      * @param {string} groupLabel - The label of the group whose cookies to delete.
      * @returns {void}
      */
-    deleteAllCookies(groupLabel) {
+    deleteAllCookies(e) {
+        const groupLabel = e.currentTarget.dataset.groupLabel;
         const cookies = this.cookies[groupLabel] || [];
+        const cookieNames = cookies.map(cookie => cookie.name);
         const failed = [];
 
         cookies.forEach(cookie => {
             this.performDelete(cookie.name);
         });
 
-        const success = this.refreshCookies(cookies.map(cookie => cookie.name));
+        const success = this.refreshCookies(cookieNames);
         if (!success) {
-            failed.push(...cookies.map(cookie => cookie.name));
+            failed.push(...this.getRemainingCookieNames(cookieNames));
         }
 
 
@@ -401,10 +418,12 @@ createTestCookies() {
         if (parentDomain) {
             const parentDomainDelete = `${cookieName}=; expires=${expires}; path=/; domain=${parentDomain};`;
             document.cookie = parentDomainDelete;
-            console.log('Parent-domain delete attempt:', parentDomainDelete);
-        }    
-        
+            if (this.isDev) {
+                console.log('Parent-domain delete attempt:', parentDomainDelete);
+            }
+        }
     }
+
     /**
      * @description Refreshes the cookie list after deletion and checks if the specified cookie still exists.
      * @param {string} cookieNames - The names of the cookies to check for existence after deletion. Can be a single cookie name or an array of cookie names.

@@ -18,7 +18,7 @@ Start the webpack watcher (rebuilds on file changes):
 npm run watch
 ```
 
-or start start the webpack dist (builds initial package and does NOT watch for changes):
+Or build the dist bundle (one-time build; does not watch for changes):
 
 ```bash
 npm run dist
@@ -97,18 +97,18 @@ This tool only manages cookies accessible via JavaScript. HttpOnly cookies canno
 Cookies are assigned to the first group whose regex matches the cookie name.  The name is a unique identifier for internal use.  The label is what is shown for the UI.  If no cookie grouping behavior it all goes into **All Cookies**.
 
 ### Parent-domain Delete Attempts
-Cookies will automatically try to delete from the parent domain of where you are calling this element.  It will recieve the hostname, and if it is in localhost, an IPv4 address, or there is no parent domain to return, then it will return a blank string and collect cookies/delete from where it is placed.
+Cookies will automatically try to delete from the parent domain of where you are calling this element.  It will receive the hostname, and if it is in localhost, an IPv4 address, or there is no parent domain to return, then it will return a blank string and collect cookies/delete from where it is placed.
 
 However if you feed in the parent domain name from the attributes of the element it will use that.
 
 ### Importing Rules
-To import rules that are given in the src code. 
+To import rules that from the published package entry point: 
 
 ```bash
-import { rules } from '../../../src/elements/cork-cookie-manager.js';
+import { rules } from '@ucdlib/cork-cookie-manager';
 ```
 
-then can demostrate rules used in the app:
+then can demonstrate rules used in the app:
 
 ```javascript
     <h4>${rules.length} Exported Rule(s):</h4>

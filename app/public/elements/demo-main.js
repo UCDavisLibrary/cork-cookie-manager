@@ -19,7 +19,6 @@ export default class DemoMain extends Mixin(LitElement)
   constructor() {
     super();
     this.render = render.bind(this);
-    this.isDev = window.location.hostname === 'localhost';
     this.groupRules = [
         {
           "name": "testGroup",

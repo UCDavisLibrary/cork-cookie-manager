@@ -80,10 +80,13 @@ export function render() {
         ${this.cookies && (Array.isArray(this.cookies) ? this.cookies.length : Object.keys(this.cookies).length)
             ? Object.entries(this.cookies).map(([groupLabel, cookies]) => html`
                 <div class="groupHeader">
-                    <button @click=${() => this.deleteAllCookies(groupLabel)} class="delete-all-btn" aria-label=${`Delete all cookies in group ${groupLabel}`}>
+                    <button @click=${this.deleteAllCookies}
+                            data-group-label="${groupLabel}"
+                            class="delete-all-btn" 
+                            aria-label=${`Delete all cookies in group ${groupLabel}`}>
                         Delete Group
                     </button>
-                    <ucd-theme-collapse title="${groupLabel}">
+                    <ucd-theme-collapse title="${groupLabel} - ${cookies.length} Cookies">
                         <div class="cookie-grid" role="grid">
                             <!-- Header -->
                             <div class="grid-header" role="row">
