@@ -167,8 +167,13 @@ createTestCookies() {
 
     const resolvedRules = this._getGroupRulesFromCookieManager(cookieManager);
 
-    if (!this._groupRulesEqual(this.groupRules, resolvedRules)) {
-        this.groupRules = this._cloneGroupRules(resolvedRules);
+    const rulesWithRegex = resolvedRules.map(rule => ({
+      ...rule,
+      compiledPatterns: (rule.patterns || []).map(p => new RegExp(p))
+    }));
+
+    if (!this._groupRulesEqual(this.groupRules, rulesWithRegex)) {
+        this.groupRules = rulesWithRegex;
     }
   }
 
@@ -514,9 +519,9 @@ createTestCookies() {
      * @returns {String}
      */    
     checkCookieGroup(cookie){
-        for (const groupRule of this.groupRules) {
-            for (const pattern of groupRule.patterns) {
-                const regex = new RegExp(pattern);
+        const rules = this.groupRules ?? this.defaultGroupRules
+        for (const groupRule of rules) {
+            for (const regex of groupRule.compiledPatterns) {
                 if (regex.test(cookie.name)) {
                     return {groupName: groupRule.name, groupLabel: groupRule.label};
                 }

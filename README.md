@@ -1,6 +1,6 @@
 # Cork Cookie Manager
 
->## **Description**
+>## Description
 
 This helps users remove unnecessary cookies (e.g. Google Analytics cookies on shared domains like `.ucdavis.edu`) that can contribute to request header size issues.
 
@@ -102,7 +102,7 @@ Cookies will automatically try to delete from the parent domain of where you are
 However if you feed in the parent domain name from the attributes of the element it will use that.
 
 ### Importing Rules
-To import rules that from the published package entry point: 
+To import rules from from the published package entry point: 
 
 ```bash
 import { rules } from '@ucdlib/cork-cookie-manager';

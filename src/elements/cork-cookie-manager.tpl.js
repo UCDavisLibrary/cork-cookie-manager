@@ -41,7 +41,7 @@ export function styles() {
              cursor: pointer;
         }
 
-        .groupHeader {
+        .group-header {
             display: flex;
             align-items: stretch;
             margin-bottom: 1em;
@@ -65,6 +65,10 @@ export function styles() {
             flex: 1 1 auto;
             min-width: 0; 
         }
+        
+        .test-button {
+            margin-bottom:1em;
+        }
     `;
 
     return [baseStyles, baseClassStyles, elementStyles];
@@ -75,11 +79,15 @@ export function render() {
     return html`
         <h1>Cookies</h1>
 
-        ${this.isDev ? html`<button style="margin-bottom:1em;" class="btn btn--lg" @click=${this.createTestCookies}>Create Test Cookies</button>`: ''}
+        ${this.isDev ? html`
+            <div class="test-button">
+                <button class="btn btn--lg" @click=${this.createTestCookies}>Create Test Cookies</button>
+            </div>`
+        : ''}
 
         ${this.cookies && (Array.isArray(this.cookies) ? this.cookies.length : Object.keys(this.cookies).length)
             ? Object.entries(this.cookies).map(([groupLabel, cookies]) => html`
-                <div class="groupHeader">
+                <div class="group-header">
                     <button @click=${this.deleteAllCookies}
                             data-group-label="${groupLabel}"
                             class="delete-all-btn" 
