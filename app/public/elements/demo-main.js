@@ -19,6 +19,7 @@ export default class DemoMain extends Mixin(LitElement)
   constructor() {
     super();
     this.render = render.bind(this);
+    this.isDev = true;
     this.groupRules = [
         {
           "name": "testGroup",
@@ -36,6 +37,8 @@ export default class DemoMain extends Mixin(LitElement)
           "patterns": [".*"]
         }
       ];
+
+      this.parentDomain = "app.local.test";
   }
 
   connectedCallback() {

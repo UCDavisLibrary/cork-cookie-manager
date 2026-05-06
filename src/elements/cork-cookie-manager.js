@@ -1,23 +1,36 @@
 import { LitElement } from 'lit';
 import {render, styles} from './cork-cookie-manager.tpl.js';
-
-import { Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins/index.js';
-import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
-
-export const rules = [{
-    "name": "googleAnalytics",
-    "label": "Google Analytics",
-    "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
-}];
- 
-export default class CorkCookieManager extends Mixin(LitElement)
-  .with(LitCorkUtils, MainDomElement) {
+import {MutationObserverController} from "@ucd-lib/theme-elements/utils/controllers";
+import './cork-cookie-alert.js';
+/**
+ * @description For managing cookies in a web application, allowing for grouping based on configurable rules and deletion of individual or grouped cookies.
+ * @params {Array} groupRules - An array of rule objects for grouping cookies.
+ * @params {String} parentDomain - The parent domain to target for cookie deletion across subdomains. If not provided, it will be auto-detected.
+ * @params {Boolean} isDev - A flag indicating whether the application is in development mode.
+ * @example
+ * <cork-cookie-manager group-rules="${JSON.stringify(this.groupRules)}"  parent-domain="${this.parentDomain}">
+ *     <script type="application/json">
+ *       {
+ *         "groupRules": [
+ *           {
+ *             "name": "analytics",
+ *             "label": "Analytics Cookies",
+ *             "patterns": ["analytics.*"]
+ *           }
+ *         ]
+ *       }
+ *     </script>
+ *   </cork-cookie-manager>
+ * @returns {void}
+ */
+export default class CorkCookieManager extends LitElement {
 
   static get properties() {
     return {
         groupRules: {type: Array, attribute: 'group-rules'},
         parentDomain: {type: String, attribute: 'parent-domain'},
         cookies: {type: Object},
+        isDev: {type: Boolean, attribute: 'is-dev'}
     }
   }
 
@@ -37,104 +50,66 @@ export default class CorkCookieManager extends Mixin(LitElement)
     this.groupRules = null;
     this._cookieManagerObserver = null;
     this.parentDomain = "";
-    this.isDev = globalThis.process?.env?.NODE_ENV === 'development' || window.location.hostname === 'localhost';
-  }
-
-/**** This section is to test the deletion button for cookies and groups and will be removed in the future */
-
-/**
- * @description Creates test cookies for demonstration purposes. Only in dev environments.
- * @returns {void}
- */
-createTestCookies() {
-  if(!this.isDev) {
-    console.warn('createTestCookies should only be used in development environments');
-    return;
-  }
-  const parentDomain = this.parentDomain || this.getParentDomain();
-  console.log('Creating test cookies with parent domain:', parentDomain);
-
-  // --- Host-only cookies (no domain) ---
-  document.cookie = "test_host_1=abc; path=/";
-  document.cookie = "test_host_2=123; path=/";
-
-  // --- Parent-domain cookies ---
-  if (parentDomain) {
-    console.log('Creating parent-domain cookies with domain:', parentDomain);
-    document.cookie = `test_parent_1=abc; path=/; domain=${parentDomain};`;
-    document.cookie = `test_parent_2=123; path=/; domain=${parentDomain};`;
-    document.cookie = `test_hard_cookie=abc; path=/; domain=${parentDomain};`;
-  }
-
-  // --- Mixed / realistic cookies ---
-  document.cookie = "session_test_cookie=xyz; path=/";
-  document.cookie = "analytics_test_cookie=456; path=/";
-
-  // Refresh UI
-  this.getCookies();
-
-  console.log("Test cookies created");
-}
-
-/********************************************************************************************************* */
-
-  /*
-    * Lifecycle method called after the component's DOM has been updated for the first time.
-  */
-  firstUpdated() {
-        this.runCookieManager();
-  }
-
-  /**
-   * @description Sets up a MutationObserver to watch for changes to the cookie manager's content
-   * @returns {void}
-  */
-  _setupGroupRulesObserver() {  
-    const cookieManager = this;
-
-    this._cookieManagerObserver = new MutationObserver((mutations) => {
-        let shouldSync = false;
-
-        for (const mutation of mutations) {
-            if (mutation.type === 'childList') {
-                shouldSync = true;
-                break;
-            }
-
-            if (mutation.type === 'attributes' &&
-                mutation.attributeName === 'group-rules') {
-                shouldSync = true;
-                break;
-            }
-
-            if (mutation.type === 'characterData') {
-                shouldSync = true;
-                break;
-            }
-        }
-
-        if(shouldSync) {
-            this._syncGroupRules();
-        }
-    });
-
-    this._cookieManagerObserver.observe(cookieManager, {
+    this.isDev = false;
+    this._groupRules = this._compileGroupRules(this.defaultGroupRules);
+    this._cookieManagerObserver = new MutationObserverController(
+        this,
+        {
         childList: true,
         subtree: true,
         attributes: true,
         characterData: true,
         attributeFilter: ['group-rules']
-    });
-
+        },
+        '_onCookieMutation'
+    );
   }
+
+    /*
+        * Lifecycle method called after the component's DOM has been updated for the first time.
+    */
+    firstUpdated() {
+        this.runCookieManager();
+    }
+
+
+    /**
+     * @description Callback function for the MutationObserver that checks if relevant mutations have occurred 
+     * and triggers a sync of group rules if necessary.
+     * @param {Array} mutations 
+     * @returns {void}
+     */
+    _onCookieMutation(mutations) {
+        if (!mutations || !mutations.length) return;
+
+        let shouldSync = false;
+
+        for (const mutation of mutations) {
+            if (
+            mutation.type === 'childList' ||
+            (mutation.type === 'attributes' && mutation.attributeName === 'group-rules') ||
+            mutation.type === 'characterData'
+            ) {
+            shouldSync = true;
+            break;
+            }
+        }
+
+        if (shouldSync) {
+            this._syncGroupRules();
+        }
+    }
 
 
   updated(changedProperties) {
-    super.updated(changedProperties);
 
     // If groupRules property has changed, sync it with the cookie manager content
     if (changedProperties.has('groupRules')) {
-        this._syncGroupRules();
+
+        const rawRules = this.groupRules ?? this.defaultGroupRules;
+        this._groupRules = this._compileGroupRules(rawRules);
+        this.getCookies();
+
     }
   }
 
@@ -144,17 +119,13 @@ createTestCookies() {
    * @returns {void}
    */
   runCookieManager() {
-    
-    if (!this._cookieManagerObserver) {
-        // Start observing for config changes after the component has been rendered for the first time
-        this._setupGroupRulesObserver();
 
-        // Initial sync of group rules from cookie manager content
-        this._syncGroupRules();  
+    // Initial sync of group rules from cookie manager content
+    this._syncGroupRules();  
 
-        // Initial retrieval of cookies after the component has been rendered
-        this.getCookies();  
-    }
+     // Initial retrieval of cookies after the component has been rendered
+    this.getCookies();  
+
   }
 
   /**
@@ -163,99 +134,53 @@ createTestCookies() {
    * @returns {void}
   */
   _syncGroupRules() {
-    const cookieManager = this;
+    const scriptRules = this._getGroupRulesFromCookieManager();
+    const resolvedRules = scriptRules ?? this.groupRules ?? this.defaultGroupRules;
 
-    const resolvedRules = this._getGroupRulesFromCookieManager(cookieManager);
 
-    const rulesWithRegex = resolvedRules.map(rule => ({
-      ...rule,
-      compiledPatterns: (rule.patterns || []).map(p => new RegExp(p))
-    }));
-
-    if (!this._groupRulesEqual(this.groupRules, rulesWithRegex)) {
-        this.groupRules = rulesWithRegex;
+    if (!this._groupRulesEqual(this.groupRules, resolvedRules)) {
+        this.groupRules = resolvedRules; // raw rules
     }
   }
+
+  _compileGroupRules(rules){
+        return (rules || []).map(rule => ({
+            ...rule,
+            compiledPatterns: (rule.patterns || []).map(p => new RegExp(p)) 
+        }))
+ }
 
  /**
    * @description Retrieves group rules from the cookie manager's content.
    * @param {HTMLElement} cookieManager - The cookie manager element to retrieve group rules from.
    * @returns {Array} An array of group rule objects.
   */
-  _getGroupRulesFromCookieManager(cookieManager) {
+  _getGroupRulesFromCookieManager() {
     // Get group rules from Json inside script tag
-    const scriptTag = cookieManager.querySelector('script[type="application/json"]');
-    if (scriptTag?.textContent?.trim()) {
-        try {
-            const parsedScript = JSON.parse(scriptTag.textContent.trim());
-            const scriptRules = parsedScript?.groupRules;
+    const scriptTag = this.querySelector('script[type="application/json"]');
 
-            const validationResult = this.validateGroupRules(scriptRules);
-            if (validationResult.valid) {
-                return validationResult.value;
-            }
 
-            console.warn(`Invalid group rules in script JSON: ${validationResult.error}`);
-
-        } catch (e) {
-            console.warn('Failed to parse group rules from cookie manager:', e);
-        }
+    if (!scriptTag?.textContent?.trim()) {
+        return null;
     }
 
-    // Fallback to group rules from attribute
-    const groupRulesAttr = cookieManager.getAttribute('group-rules');
-    if (groupRulesAttr) {
-        try {
-            const parsedAttr = JSON.parse(groupRulesAttr);
+    try {
+        const parsedScript = JSON.parse(scriptTag.textContent.trim());
+        const scriptRules = parsedScript?.groupRules;
 
-            const validationResult = this.validateGroupRules(parsedAttr);
-            if (validationResult.valid) {
-                return validationResult.value;
-            }
-
-            console.warn(`Invalid group rules in attribute: ${validationResult.error}`);
-
-        } catch (e) {
-            console.warn('Failed to parse group rules from attribute:', e);
-        }
-    }
-
-    // If group rules are already set on the component, validate and use them
-    if (this.groupRules != null) {
-        const propertyValidation = this.validateGroupRules(this.groupRules);
-        if (propertyValidation.valid) {
-            return propertyValidation.value;
+        const validationResult = this.validateGroupRules(scriptRules);
+        if (validationResult.valid) {
+            return validationResult.value;
         }
 
-        console.warn(`Invalid group rules in property: ${propertyValidation.error}`);
-    }
+        console.warn(`Invalid group rules in script JSON: ${validationResult.error}`);
 
+    } catch (e) {
+        console.warn('Failed to parse group rules from cookie manager:', e);
+    }
 
     // Return default group rules if no valid rules found
-    return this.defaultGroupRules;
-  }
-
-    /**
-   * @description Safely clones the provided group rules, using structuredClone when available
-   * and falling back to JSON-based deep cloning otherwise.
-   * @param {Array} rules - The group rules to clone.
-   * @returns {Array} A cloned copy of the input rules.
-   */
-  _cloneGroupRules(rules) {
-    // Prefer globalThis.structuredClone if available
-    try {
-      if (typeof globalThis !== 'undefined' && typeof globalThis.structuredClone === 'function') {
-        return globalThis.structuredClone(rules);
-      }
-    } catch (e) {
-      // Fall through to other strategies
-    }
-    // Fallback to bare structuredClone if defined in the global scope
-    if (typeof structuredClone === 'function') {
-      return structuredClone(rules);
-    }
-    // Last-resort deep clone for plain data (arrays/objects)
-    return JSON.parse(JSON.stringify(rules));
+    return null;
   }
 
   /**
@@ -273,49 +198,49 @@ createTestCookies() {
    * To manage HttpOnly cookies, you would need to do so from the server side by sending appropriate Set-Cookie headers.
    * @returns {void}
    */
-  getCookies() {
-    const allCookies = document.cookie || '';
+    getCookies() {
+        const allCookies = document.cookie || '';
 
-    // no cookies, return empty array
-    if (!allCookies) {
-        this.cookies = {};
-        return;
-    }
-    const parsedCookies = allCookies.split(';')
-        .map(cookie => cookie.trim())
-        .filter(cookie => cookie.length > 0)
-        .map(cookie => {
-            const separatorIndex = cookie.indexOf('=');
-            let name, value;
-            if (separatorIndex === -1) {
-                // Handle case where cookie string does not contain '=' character
-                name = cookie.trim();
-                value = '';
-            } else {
-                // Split on the first '=' character to allow for '=' in the cookie value
-                name = cookie.slice(0,separatorIndex).trim();
-                value = cookie.slice(separatorIndex + 1).trim();
-                }
-
-            const safeValue = value != null ? value : '';
-            return { name, value: safeValue, valueLength: safeValue.length, ...this.checkCookieGroup({name}) };
-        });
-
-
-    this.cookies = parsedCookies.reduce((groups, cookie) => {
-        const { groupLabel } = cookie;
-
-        if (!groups[groupLabel]) {
-            groups[groupLabel] = [];
+        // no cookies, return empty array
+        if (!allCookies) {
+            this.cookies = {};
+            return;
         }
+        const parsedCookies = allCookies.split(';')
+            .map(cookie => cookie.trim())
+            .filter(cookie => cookie.length > 0)
+            .map(cookie => {
+                const separatorIndex = cookie.indexOf('=');
+                let name, value;
+                if (separatorIndex === -1) {
+                    // Handle case where cookie string does not contain '=' character
+                    name = cookie.trim();
+                    value = '';
+                } else {
+                    // Split on the first '=' character to allow for '=' in the cookie value
+                    name = cookie.slice(0,separatorIndex).trim();
+                    value = cookie.slice(separatorIndex + 1).trim();
+                    }
 
-        groups[groupLabel].push(cookie);
-        return groups;
+                const safeValue = value != null ? value : '';
+                return { name, value: safeValue, valueLength: safeValue.length, ...this.checkCookieGroup({name}) };
+            });
 
-    }, {});
 
-    this.requestUpdate();
- }
+        this.cookies = parsedCookies.reduce((groups, cookie) => {
+            const { groupLabel } = cookie;
+
+            if (!groups[groupLabel]) {
+                groups[groupLabel] = [];
+            }
+
+            groups[groupLabel].push(cookie);
+            return groups;
+
+        }, {});
+
+        this.requestUpdate();
+    }
 
     /**
      * @description Retrieves the parent domain of the current page by extracting the last two segments of the hostname.
@@ -361,30 +286,38 @@ createTestCookies() {
         return cookieNames.filter(cookieName => existingCookieNames.has(cookieName));
     }
 
-   /**
-     * @description Deletes a cookie by name when the delete button is clicked by calling performDelete 
-     * @param {{name: string}} e - Cookie object to act on. Currently only the `name` property is used.
+    /**
+     * @description Deletes a cookie when the delete button is clicked
+     * @param {Event} e - Click event from the delete button
      * @returns {void}
-   */
-    deleteCookie(e) {
+     */
+    deleteCookie(e) {        
         const cookieName = e.currentTarget.dataset.cookieName;
         this.performDelete(cookieName);
         const success = this.refreshCookies(cookieName);
 
         if (!success) {
-            console.warn('Some cookies could not be removed (domain/path mismatch or HttpOnly).', cookieName);
-            // You could implement additional UI feedback here to indicate which cookies failed to delete, in AppStateModel.
-
+            this.showAlert({header: 'Warning: Unable to Remove Cookie', message: 'Cookie could not be removed (domain/path mismatch or HttpOnly): ' + cookieName, timeout: 200, duration: 3000});
         }
     }
 
     /**
+     * @description Displays an alert message using the CorkCookieAlert component.
+     * @param {Object} options - An object containing options for the alert, such as `message`, `brandColor`, and `timeout`.
+     */
+    showAlert(options) {
+        const alertElement = this.renderRoot?.querySelector('cork-cookie-alert');
+        alertElement?.onAlert(options);
+    }
+
+    /**
      * @description Deletes all cookies in a specified group.
-     * @param {string} groupLabel - The label of the group whose cookies to delete.
+     * @param {Event} e - Click event from the delete group button
      * @returns {void}
      */
     deleteAllCookies(e) {
         const groupLabel = e.currentTarget.dataset.groupLabel;
+
         const cookies = this.cookies[groupLabel] || [];
         const cookieNames = cookies.map(cookie => cookie.name);
         const failed = [];
@@ -400,9 +333,7 @@ createTestCookies() {
 
 
         if (failed.length) {
-            console.warn('Some cookies could not be removed (domain/path mismatch or HttpOnly).', failed);
-            // You could implement additional UI feedback here to indicate which cookies failed to delete, in AppStateModel.
-
+            this.showAlert({header: 'Warning: Unable to Remove Cookies', message: 'Some cookies could not be removed (domain/path mismatch or HttpOnly): ' + failed.join(', '), timeout: 200, duration: 3000});
         }
 
     }
@@ -438,9 +369,7 @@ createTestCookies() {
         // Refresh the cookie list after deletion
         this.getCookies();
 
-        const allCookies = Array.isArray(this.cookies)
-            ? this.cookies
-            : Object.values(this.cookies || {}).flat();
+        const allCookies = Object.values(this.cookies || {}).flat();
 
         const cookieNamesArray = Array.isArray(cookieNames) ? cookieNames : [cookieNames];
         const stillExists = cookieNamesArray.some(cookieName => allCookies.some(cookie => cookie.name === cookieName));
@@ -456,7 +385,7 @@ createTestCookies() {
         let error = null;
 
         if (!Array.isArray(groupRules)) {
-            return { valid: false, error: 'groupRules must be an array' };
+            return { valid: false, error: 'GroupRules must be an array.' };
         }
 
         groupRules.forEach((rule, index) => {
@@ -465,25 +394,25 @@ createTestCookies() {
 
             // Validate that each rule is an object
             if (!rule || typeof rule !== 'object') {
-                error = `groupRules[${index}] is not a valid object`;
+                error = `GroupRules[${index}] is not a valid object.`;
                 return;
             }
 
             // Validate that name is a non-empty string
             if (typeof rule.name !== 'string' || !rule.name.trim()) {
-                error = `groupRules[${index}].name must be a string`;
+                error = `GroupRules[${index}].name must be a string.`;
                 return;
             }
 
             // Validate that label is a non-empty string
             if (typeof rule.label !== 'string' || !rule.label.trim()) {
-                error = `groupRules[${index}].label must be a string`;
+                error = `GroupRules[${index}].label must be a string.`;
                 return;
             }
             
             // Validate that patterns is an array of valid regular expression strings
             if (!Array.isArray(rule.patterns)) {
-                error = `groupRules[${index}].patterns must be an array`;
+                error = `GroupRules[${index}].patterns must be an array.`;
                 return;
             }
 
@@ -492,14 +421,14 @@ createTestCookies() {
                 if (error) return;
 
                 if (typeof pattern !== 'string') {
-                    error = `groupRules[${index}].patterns[${patternIndex}] must be a string`;
+                    error = `GroupRules[${index}].patterns[${patternIndex}] must be a string.`;
                     return;
                 }
 
                 try {
                     new RegExp(pattern);
                 } catch (e) {
-                    error = `groupRules[${index}].patterns[${patternIndex}] is not a valid regular expression: ${e.message}`;
+                    error = `GroupRules[${index}].patterns[${patternIndex}] is not a valid regular expression: ${e.message}.`;
                     return;
                 }
             });
@@ -519,9 +448,11 @@ createTestCookies() {
      * @returns {String}
      */    
     checkCookieGroup(cookie){
-        const rules = this.groupRules ?? this.defaultGroupRules
+    const rules = this._groupRules ?? this._compileGroupRules(this.defaultGroupRules);
         for (const groupRule of rules) {
-            for (const regex of groupRule.compiledPatterns) {
+            const patterns = groupRule.compiledPatterns ?? (groupRule.patterns || []).map(p => new RegExp(p));
+
+            for (const regex of patterns) {
                 if (regex.test(cookie.name)) {
                     return {groupName: groupRule.name, groupLabel: groupRule.label};
                 }
@@ -537,8 +468,6 @@ createTestCookies() {
     connectedCallback() {
         super.connectedCallback();
 
-        // Ensure the observer and cookie state are initialized whenever the element is (re)attached.
-        this.runCookieManager();
     }
 
 

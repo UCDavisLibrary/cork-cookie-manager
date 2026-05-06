@@ -69,6 +69,72 @@ export function styles() {
         .test-button {
             margin-bottom:1em;
         }
+
+        @media (max-width: 545px) {
+
+            .cookie-grid {
+                display: block; /* break grid layout */
+            }
+
+            .grid-header {
+                display: none; /* hide header on mobile */
+            }
+
+            .grid-row {
+                display: block;
+                border-bottom: 1px solid #ddd;
+                margin-bottom: 1em;
+                padding: 0.5em 0;
+            }
+
+            .grid-row > div {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding: 6px 8px;
+                gap: 0.75rem;
+            }
+
+            .grid-row > div::before {
+                flex: 0 0 auto;   
+                font-weight: bold;
+                white-space: nowrap;
+            }
+
+            .grid-row > div:nth-child(1) {
+                padding: 0;
+            }
+
+            .grid-row > div:nth-child(1) button {
+                width: 100%;
+            }
+
+            .grid-row > div:nth-child(1)::before {
+                content: none;
+            }
+
+            .grid-row > div:nth-child(2)::before {
+                content: "Name:";
+                font-weight: bold;
+            }
+
+            .grid-row > div:nth-child(2) {
+                flex: 1 1 auto;
+                min-width: 0;  
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+
+            .grid-row > div:nth-child(3)::before {
+                content: "Length:";
+                font-weight: bold;
+            }
+
+            .center-container {
+                justify-content: space-between;
+            }
+
+        }
     `;
 
     return [baseStyles, baseClassStyles, elementStyles];
@@ -79,14 +145,7 @@ export function render() {
     return html`
         <h1>Cookies</h1>
 
-        ${this.isDev ? html`
-            <div class="test-button">
-                <button class="btn btn--lg" @click=${this.createTestCookies}>Create Test Cookies</button>
-            </div>`
-        : ''}
-
-        ${this.cookies && (Array.isArray(this.cookies) ? this.cookies.length : Object.keys(this.cookies).length)
-            ? Object.entries(this.cookies).map(([groupLabel, cookies]) => html`
+        ${this.cookies && Object.keys(this.cookies).length > 0 ? Object.entries(this.cookies).map(([groupLabel, cookies]) => html`
                 <div class="group-header">
                     <button @click=${this.deleteAllCookies}
                             data-group-label="${groupLabel}"
@@ -95,7 +154,7 @@ export function render() {
                         Delete Group
                     </button>
                     <ucd-theme-collapse title="${groupLabel} - ${cookies.length} Cookies">
-                        <div class="cookie-grid" role="grid">
+                        <div class="cookie-grid" role="region" aria-label="List of cookies in group ${groupLabel}">
                             <!-- Header -->
                             <div class="grid-header" role="row">
                                 <div class="center-container" role="columnheader">Delete?</div>
@@ -122,6 +181,8 @@ export function render() {
                         </div>
                     </ucd-theme-collapse>
                 </div>
+                <cork-cookie-alert></cork-cookie-alert>
+
             `) 
             : html`<p>No cookies found.</p>`
         }

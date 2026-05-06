@@ -43,47 +43,61 @@ Can add group rules config to through the script tag in the element or as an att
 
 An example usage of this element:
 
-```javascript
-    this.groupRules = [
-        {
-          "name": "testGroup",
-          "label": "Test Group",
-          "patterns": [".*test.*"]
-        },
-        {
-          "name": "googleAnalytics",
-          "label": "Google Analytics",
-          "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
-        },
-        {
-          "name": "attributeOther",
-          "label": "Other",
-          "patterns": [".*"]
-        }
-      ];
-  
-    this.parentDomain = "app.local.test";
-```
+### With Script Config
 
 ```javascript
-<cork-cookie-manager group-rules="${JSON.stringify(this.groupRules)}"  parent-domain="${this.parentDomain}">
-  <script type="application/json">
-    {
-      "groupRules": [
-        {
-          "name": "googleAnalytics",
-          "label": "Google Analytics",
-          "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
-        },
-        {
-          "name": "other",
-          "label": "Other",
-          "patterns": [".*"]
-        }
-      ]
-    }
+import '@ucdlib/cork-cookie-manager'
+  
+  this.parentDomain = "app.local.test";
+
+  <cork-cookie-manager>
+    <script type="application/json">
+      {
+        "groupRules": [
+          {
+            "name": "googleAnalytics",
+            "label": "Google Analytics",
+            "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
+          },
+          {
+            "name": "other",
+            "label": "Other",
+            "patterns": [".*"]
+          }
+        ]
+      }
   </script>
 </cork-cookie-manager>
+```
+
+### With Attribute Config
+
+```javascript
+import '@ucdlib/cork-cookie-manager'
+  this.groupRules = [
+          {
+            "name": "testGroup",
+            "label": "Test Group",
+            "patterns": [".*test.*"]
+          },
+          {
+            "name": "googleAnalytics",
+            "label": "Google Analytics",
+            "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
+          },
+          {
+            "name": "attributeOther",
+            "label": "Other",
+            "patterns": [".*"]
+          }
+        ];
+    
+  this.parentDomain = "app.local.test";
+
+  <cork-cookie-manager 
+    .groupRules="${this.groupRules)}"  
+    .parentDomain="${this.parentDomain}">
+  </cork-cookie-manager>
 ```
 
 
@@ -100,21 +114,25 @@ Cookies will automatically try to delete from the parent domain of where you are
 However if you feed in the parent domain name from the attributes of the element it will use that.
 
 ### Importing Rules
-To import rules from from the published package entry point: 
+To import rules from the published package entry point: 
 
 ```bash
-import { rules } from '@ucdlib/cork-cookie-manager';
+import { rules } from '@ucdlib/cork-cookie-manager';;
 ```
 
 then can demonstrate rules used in the app:
 
 ```javascript
-    <h4>${rules.length} Exported Rule(s):</h4>
-    ${rules.map(rule => html`
+  render() {
+    return html`
+      <h4>${rules.length} Exported Rule(s):</h4>
+      ${rules.map(rule => html`
         <div>
-            <h5>${rule.label}</h5>
-            <p><strong>Patterns:</strong> ${rule.patterns.join(', ')}</p>
+          <h5>${rule.label}</h5>
+          <p><strong>Patterns:</strong> ${rule.patterns.join(', ')}</p>
         </div>
-    `)}
+      `)}
+    `;
+  }
 ```
 
