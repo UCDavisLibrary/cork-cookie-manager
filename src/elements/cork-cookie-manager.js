@@ -315,7 +315,7 @@ export default class CorkCookieManager extends LitElement {
      * @param {Event} e - Click event from the delete group button
      * @returns {void}
      */
-    deleteAllCookies(e) {
+    _onDeleteAllCookiesClick(e) {
         const groupLabel = e.currentTarget.dataset.groupLabel;
 
         const cookies = this.cookies[groupLabel] || [];

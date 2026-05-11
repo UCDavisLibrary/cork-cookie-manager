@@ -147,7 +147,7 @@ export function render() {
 
         ${this.cookies && Object.keys(this.cookies).length > 0 ? Object.entries(this.cookies).map(([groupLabel, cookies]) => html`
                 <div class="group-header">
-                    <button @click=${this.deleteAllCookies}
+                    <button @click=${this._onDeleteAllCookiesClick}
                             data-group-label="${groupLabel}"
                             class="delete-all-btn" 
                             aria-label=${`Delete all cookies in group ${groupLabel}`}>
