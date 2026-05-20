@@ -116,12 +116,8 @@ export default class CorkCookieManager extends LitElement {
    */
   runCookieManager() {
 
-    // Initial sync of group rules from cookie manager content
     this._syncGroupRules();  
-
-     // Initial retrieval of cookies after the component has been rendered
     this.getCookies();  
-
   }
 
   /**
@@ -196,7 +192,6 @@ export default class CorkCookieManager extends LitElement {
    * @returns {Array|null} The group rules if found and valid, or null if not found or invalid.
   */
   _getGroupRulesFromCookieManager() {
-    // Get group rules from Json inside script tag
     const scriptTag = this.querySelector('script[type="application/json"]');
 
 
@@ -206,7 +201,6 @@ export default class CorkCookieManager extends LitElement {
 
     try {
         const parsedScript = JSON.parse(scriptTag.textContent.trim());
-        console.log('Parsed group rules from script tag:', parsedScript);
         const scriptRules = parsedScript?.groupRules;
 
         const validationResult = this.validateGroupRules(scriptRules);
@@ -244,14 +238,12 @@ export default class CorkCookieManager extends LitElement {
                 const separatorIndex = cookie.indexOf('=');
                 let name, value;
                 if (separatorIndex === -1) {
-                    // Handle case where cookie string does not contain '=' character
                     name = cookie.trim();
                     value = '';
                 } else {
-                    // Split on the first '=' character to allow for '=' in the cookie value
                     name = cookie.slice(0,separatorIndex).trim();
                     value = cookie.slice(separatorIndex + 1).trim();
-                    }
+                }
 
                 const safeValue = value != null ? value : '';
                 return { name, value: safeValue, valueLength: safeValue.length, ...this.checkCookieGroup({name}) };
@@ -280,24 +272,20 @@ export default class CorkCookieManager extends LitElement {
     getParentDomain() {
         const host = window.location.hostname;
 
-        // Skip localhost
         if (host === 'localhost') {
             return '';
         }
 
-        // Skip IPv4 addresses
         if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
             return '';
         }
 
         const parts = host.split('.');
 
-        // Less than 2 parts mean no parent domain to return
         if (parts.length < 2) {
             return '';
         }
 
-        // Return two parts from parent domain
         return `.${parts.slice(-2).join('.')}`;
 
     }   
@@ -379,7 +367,6 @@ export default class CorkCookieManager extends LitElement {
         const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
         const parentDomain = this.parentDomain || this.getParentDomain(); 
 
-        //   Attempt deletes
         document.cookie = `${cookieName}=; expires=${expires}; path=/;`;
 
         // Attempt parent domain delete if parent domain exists
@@ -399,7 +386,6 @@ export default class CorkCookieManager extends LitElement {
      * @returns {boolean} Returns true if the cookie no longer exists, false if it still exists.
      */
     refreshCookies(cookieNames) {
-        // Refresh the cookie list after deletion
         this.getCookies();
 
         const allCookies = Object.values(this.cookies || {}).flat();
