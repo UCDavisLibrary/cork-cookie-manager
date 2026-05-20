@@ -4,6 +4,11 @@ import {render, styles} from './demo-main.tpl.js';
 import { Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins/index.js';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
+/**
+ * @description Main demo element for cookie manager. 
+ * Displays the cookie manager and test cookies in a development environment, 
+ * and just the cookie manager in production.
+ */
 export default class DemoMain extends Mixin(LitElement)
   .with(LitCorkUtils, MainDomElement) {
 
@@ -39,10 +44,6 @@ export default class DemoMain extends Mixin(LitElement)
       ];
 
       this.parentDomain = "app.local.test";
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
   }
 
 }

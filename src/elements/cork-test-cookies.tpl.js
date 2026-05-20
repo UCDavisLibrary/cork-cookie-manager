@@ -15,7 +15,7 @@ export function styles() {
 export function render() {
     return html`
         <h2>Test Cookies</h2>
-        <p>This page is for testing cookie deletion. It sets a few cookies that match the test group pattern and some that do not.</p>
+        <p>This button is for testing cookie deletion. It sets a few cookies that match the test group pattern and some that do not.</p>
         <div class="test-button">
             <button class="btn btn--lg" @click=${this.createTestCookies}>Create Test Cookies</button>
         </div>

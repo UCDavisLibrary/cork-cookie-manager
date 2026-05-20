@@ -1,4 +1,6 @@
 import { rules } from '../../../src/browser.js';
+import CorkTestCookies from '../../../src/elements/cork-test-cookies.js';
+customElements.define('cork-test-cookies', CorkTestCookies);
 
 import {html, css} from 'lit';
 
@@ -28,17 +30,6 @@ export function render() {
         <cork-test-cookies .parentDomain="${this.parentDomain}"></cork-test-cookies>
     ` : ''}  
     <cork-cookie-manager is-dev="${this.isDev}" .groupRules="${this.groupRules}" .parentDomain="${this.parentDomain}">
-     <script type="application/json">
-      
-          [
-           {
-             "name": "analytics",
-             "label": "Analytics Cookies",
-             "patterns": ["analytics.*"]
-           }
-         ]
-       
-     </script>
     </cork-cookie-manager>
 
         

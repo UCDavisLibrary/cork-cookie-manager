@@ -1,6 +1,7 @@
 import {html, css} from 'lit';
 import baseStyles from '@ucd-lib/theme-sass/1_base_html/_index.css.js';
 import baseClassStyles from '@ucd-lib/theme-sass/2_base_class/_index.css.js';
+import baseComponent from '@ucd-lib/theme-sass/4_component/_index.css.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-collapse/ucd-theme-collapse.js';
 
 export function styles() {
@@ -9,13 +10,33 @@ export function styles() {
             display: block;
         }
 
-        .cookie-grid {
-            display: grid;
-            grid-template-columns: auto 1fr .25fr;
+        .alert {            
+            opacity: 0;
+            max-height: 0;
+            padding:0;
+            overflow: hidden;
+            transition: opacity 0.5s ease-out, 
+                max-height 0.3s ease-out 0.5s, 
+                padding 0.3s ease-out 0.5s;
         }
 
-        .grid-header, .grid-row {
-            display: contents;
+        .alert.is-visible {
+            opacity: 1;
+            padding: 32px;
+            max-height: 200px; 
+            transition: max-height 0.3s ease-in, 
+                padding 0.3s ease-in, 
+                opacity 0.5s ease-in 0.2s;        
+        }
+
+        .cookie-grid {
+            display: block;
+        }
+
+        .grid-header,
+        .grid-row {
+            display: grid;
+            grid-template-columns: .5fr 1fr .25fr;
         }
 
         .grid-header > div {
@@ -70,14 +91,41 @@ export function styles() {
             margin-bottom:1em;
         }
 
-        @media (max-width: 545px) {
+        .mobile-label {
+            display: none;
+            font-weight: bold;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        .cookie-name {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
 
-            .cookie-grid {
-                display: block; /* break grid layout */
+        @media (max-width: 580px) {
+            .mobile-label {
+                display: inline-block;
             }
 
+            .grid-cell--actions .category-brand--double-decker,
+            .grid-cell--actions .alignable-promo,
+            .grid-cell--actions .alignable-promo__wrapper,
+            .grid-cell--actions .alignable-promo__body,
+            .grid-cell--actions .alignable-promo__buttons {
+                width: 100%;
+            }
+
+            .grid-cell--actions .alignable-promo__buttons {
+                display: flex;
+                justify-content: center;
+            }
+            .cookie-grid {
+                display: block;
+
             .grid-header {
-                display: none; /* hide header on mobile */
+                display: none;
             }
 
             .grid-row {
@@ -95,39 +143,23 @@ export function styles() {
                 gap: 0.75rem;
             }
 
-            .grid-row > div::before {
-                flex: 0 0 auto;   
-                font-weight: bold;
-                white-space: nowrap;
-            }
-
-            .grid-row > div:nth-child(1) {
+            .grid-cell--actions {
                 padding: 0;
             }
 
-            .grid-row > div:nth-child(1) button {
+            .grid-cell--actions button {
                 width: 100%;
             }
 
-            .grid-row > div:nth-child(1)::before {
-                content: none;
-            }
-
-            .grid-row > div:nth-child(2)::before {
-                content: "Name:";
-                font-weight: bold;
-            }
-
-            .grid-row > div:nth-child(2) {
+            .grid-cell--name {
                 flex: 1 1 auto;
-                min-width: 0;  
+                min-width: 0;
                 overflow-wrap: anywhere;
                 word-break: break-word;
             }
 
-            .grid-row > div:nth-child(3)::before {
-                content: "Length:";
-                font-weight: bold;
+            .grid-cell--actions button {
+                width: 100%;
             }
 
             .center-container {
@@ -137,51 +169,71 @@ export function styles() {
         }
     `;
 
-    return [baseStyles, baseClassStyles, elementStyles];
+    return [baseStyles, baseClassStyles, baseComponent, elementStyles];
 }
 
 
 export function render() {
     return html`
         <h1>Cookies</h1>
-
+                <div class="alert ${this.alertType} ${this.showAlert ? 'is-visible' : ''}" role="alert">
+                    <div class="alert__inner">
+                        <p>${this.alertMessage}</p>
+                    </div>
+                </div>
+        
         ${this.cookies && Object.keys(this.cookies).length > 0 ? Object.entries(this.cookies).map(([groupLabel, cookies]) => html`
                 <div class="group-header">
                     <button @click=${this._onDeleteAllCookiesClick}
                             data-group-label="${groupLabel}"
                             class="delete-all-btn" 
                             aria-label=${`Delete all cookies in group ${groupLabel}`}>
-                        Delete Group
+                        &#10006;
                     </button>
                     <ucd-theme-collapse title="${groupLabel} - ${cookies.length} Cookies">
                         <div class="cookie-grid" role="region" aria-label="List of cookies in group ${groupLabel}">
-                            <!-- Header -->
                             <div class="grid-header" role="row">
                                 <div class="center-container" role="columnheader">Delete?</div>
                                 <div role="columnheader">Cookie Name</div>
                                 <div role="columnheader">Cookie Length</div>
                             </div>
                             
-                            <!-- Body Rows -->
                             ${cookies.map(cookie => html`
                                 <div class="grid-row" role="row">
-                                    <div class="center-container" role="gridcell">      
-                                        <button 
-                                            @click=${this.deleteCookie} 
-                                            data-cookie-name="${cookie.name}"
-                                            aria-label=${`Delete cookie ${cookie.name}`}
-                                            class="btn btn--sm delete-cookie-button">
-                                            Delete
-                                        </button>
+                                    <div class="grid-cell grid-cell--actions center-container" role="gridcell">     
+                                        <div class="category-brand--double-decker">
+                                            <div class="alignable-promo">
+                                                <div class="alignable-promo__wrapper">
+                                                    <div class="alignable-promo__body">
+                                                        <div class="alignable-promo__buttons">
+                                                            <button 
+                                                            @click=${this.deleteCookie} 
+                                                            data-cookie-name="${cookie.name}"
+                                                            aria-label=${`Delete cookie ${cookie.name}`}
+                                                            class="btn btn--primary">
+                                                            Delete
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>  
                                     </div>
-                                    <div role="gridcell">${cookie.name}</div>
-                                    <div role="gridcell">${cookie.valueLength}</div>
+
+                                    <div class="grid-cell grid-cell--name" role="gridcell">
+                                        <span class="mobile-label">Name:</span>
+                                        <span class='cookie-name'>${cookie.name}</span>
+                                    </div>
+
+                                    <div class="grid-cell grid-cell--length" role="gridcell">
+                                        <span class="mobile-label">Length:</span>
+                                        <span>${cookie.valueLength}</span>
+                                    </div>
                                 </div>
                             `)}
                         </div>
                     </ucd-theme-collapse>
                 </div>
-                <cork-cookie-alert></cork-cookie-alert>
 
             `) 
             : html`<p>No cookies found.</p>`

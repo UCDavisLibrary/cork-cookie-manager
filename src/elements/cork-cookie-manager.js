@@ -1,26 +1,26 @@
 import { LitElement } from 'lit';
 import {render, styles} from './cork-cookie-manager.tpl.js';
 import {MutationObserverController} from "@ucd-lib/theme-elements/utils/controllers";
-import './cork-cookie-alert.js';
+
 /**
  * @description For managing cookies in a web application, allowing for grouping based on configurable rules and deletion of individual or grouped cookies.
  * @params {Array} groupRules - An array of rule objects for grouping cookies.
  * @params {String} parentDomain - The parent domain to target for cookie deletion across subdomains. If not provided, it will be auto-detected.
  * @params {Boolean} isDev - A flag indicating whether the application is in development mode.
  * @example
- * <cork-cookie-manager group-rules="${JSON.stringify(this.groupRules)}"  parent-domain="${this.parentDomain}">
- *     <script type="application/json">
- *       {
- *         "groupRules": [
- *           {
- *             "name": "analytics",
- *             "label": "Analytics Cookies",
- *             "patterns": ["analytics.*"]
- *           }
- *         ]
- *       }
- *     </script>
- *   </cork-cookie-manager>
+ *   <cork-cookie-manager is-dev="${this.isDev}" .groupRules="${this.groupRules}" .parentDomain="${this.parentDomain}">
+ *      <script type="application/json">
+ *          {
+ *              "groupRules": [
+ *              {
+ *                  "name": "analytics",
+ *                  "label": "Analytics Cookies",
+ *                  "patterns": ["analytics.*"]
+ *              }
+ *              ]
+ *          }
+ *      </script>
+ *  </cork-cookie-manager>
  * @returns {void}
  */
 export default class CorkCookieManager extends LitElement {
@@ -30,7 +30,11 @@ export default class CorkCookieManager extends LitElement {
         groupRules: {type: Array, attribute: 'group-rules'},
         parentDomain: {type: String, attribute: 'parent-domain'},
         cookies: {type: Object},
-        isDev: {type: Boolean, attribute: 'is-dev'}
+        isDev: {type: Boolean, attribute: 'is-dev'},
+        alertType: {type: String},
+        alertMessage: {type: String},
+        alerts: {type: Array},
+        isProcessingAlert: {type: Boolean}
     }
   }
 
@@ -52,14 +56,18 @@ export default class CorkCookieManager extends LitElement {
     this.parentDomain = "";
     this.isDev = false;
     this._groupRules = this._compileGroupRules(this.defaultGroupRules);
+    this.alertType = "alert--error";
+    this.alerts = [];
+    this.alertMessage = "No message at this time.";
+    this.isProcessingAlert = false;
+
     this._cookieManagerObserver = new MutationObserverController(
         this,
         {
         childList: true,
         subtree: true,
         attributes: true,
-        characterData: true,
-        attributeFilter: ['group-rules']
+        characterData: true
         },
         '_onCookieMutation'
     );
@@ -72,7 +80,6 @@ export default class CorkCookieManager extends LitElement {
         this.runCookieManager();
     }
 
-
     /**
      * @description Callback function for the MutationObserver that checks if relevant mutations have occurred 
      * and triggers a sync of group rules if necessary.
@@ -82,40 +89,29 @@ export default class CorkCookieManager extends LitElement {
     _onCookieMutation(mutations) {
         if (!mutations || !mutations.length) return;
 
-        let shouldSync = false;
-
-        for (const mutation of mutations) {
-            if (
-            mutation.type === 'childList' ||
-            (mutation.type === 'attributes' && mutation.attributeName === 'group-rules') ||
-            mutation.type === 'characterData'
-            ) {
-            shouldSync = true;
-            break;
-            }
-        }
-
-        if (shouldSync) {
-            this._syncGroupRules();
-        }
-    }
-
-
-  updated(changedProperties) {
-
-    // If groupRules property has changed, sync it with the cookie manager content
-    if (changedProperties.has('groupRules')) {
-
-        const rawRules = this.groupRules ?? this.defaultGroupRules;
-        this._groupRules = this._compileGroupRules(rawRules);
-        this.getCookies();
+        this._syncGroupRules();
 
     }
-  }
 
   /**
-   * @description Initializes the cookie manager by setting up the MutationObserver to watch for changes in the cookie manager's content 
-   * and performs sync 
+    * @description LitElement lifecycle method called before updates.
+    * @param {Map} changedProperties - A map of changed properties and their previous values.
+    * @returns {void}
+  */
+  willUpdate(changedProperties) {
+        if (changedProperties.has('groupRules')) {
+            const rawRules = this.groupRules ?? this.defaultGroupRules;
+            this._groupRules = this._compileGroupRules(rawRules);
+            this.getCookies(); 
+        }
+        if (changedProperties.has('alerts')) {
+            this.alertTimeout();
+        }
+    }
+
+  /**
+   * @description Initializes the cookie manager by syncing group rules from the cookie manager's 
+   * content and retrieving the current cookies.
    * @returns {void}
    */
   runCookieManager() {
@@ -129,20 +125,64 @@ export default class CorkCookieManager extends LitElement {
   }
 
   /**
-   * @description Synchronizes the `groupRules` property with the current content of the cookie manager. 
-   * It retrieves the group rules from either a JSON script tag or an attribute, validates them, and updates the `groupRules` property if they have changed.
+   * @description Handles the display of alert messages when cookies cannot be 
+   * deleted. It processes the first alert in the queue, displays it 
+   * for a set duration, and then removes it from the queue before allowing the next alert 
+   * to be processed.
+   * @returns {void}
+   */
+  alertTimeout(){
+    if (this.isProcessingAlert || !this.alerts.length) return;
+    this.isProcessingAlert = true;
+
+    const current = this.alerts[0];
+    this.alertType = current.type;
+    this.alertMessage = current.message;
+
+    this.showAlert = true;
+
+    setTimeout(() => {
+        this.showAlert = false;
+        this.requestUpdate();
+
+        setTimeout(() => {
+            this.isProcessingAlert = false;
+            this.alerts = this.alerts.slice(1);
+        }, 500);
+
+    }, 8000);
+
+  }
+
+  /**
+   * @description Synchronizes the group rules by first attempting to retrieve them 
+   * from the cookie manager's content (e.g., a script tag).
    * @returns {void}
   */
   _syncGroupRules() {
     const scriptRules = this._getGroupRulesFromCookieManager();
-    const resolvedRules = scriptRules ?? this.groupRules ?? this.defaultGroupRules;
 
-
-    if (!this._groupRulesEqual(this.groupRules, resolvedRules)) {
-        this.groupRules = resolvedRules; // raw rules
+    if (scriptRules) {
+        this.groupRules = scriptRules;
+        return;
     }
+
+    const propertyRules = this.validateGroupRules(this.groupRules);
+    if (propertyRules.valid) {
+        this.groupRules = propertyRules.value;
+        return;
+    }
+
+    this.groupRules = this.defaultGroupRules;
+
   }
 
+ /**
+   * @description Compiles the group rules by converting the pattern strings into 
+   * RegExp objects for efficient matching.
+   * @param {Array} rules - The group rules to compile.
+   * @returns {Array} The group rules with compiled patterns.
+  */
   _compileGroupRules(rules){
         return (rules || []).map(rule => ({
             ...rule,
@@ -151,9 +191,9 @@ export default class CorkCookieManager extends LitElement {
  }
 
  /**
-   * @description Retrieves group rules from the cookie manager's content.
-   * @param {HTMLElement} cookieManager - The cookie manager element to retrieve group rules from.
-   * @returns {Array} An array of group rule objects.
+   * @description Attempts to retrieve group rules from the cookie manager's content, 
+   * such as a script tag containing JSON. 
+   * @returns {Array|null} The group rules if found and valid, or null if not found or invalid.
   */
   _getGroupRulesFromCookieManager() {
     // Get group rules from Json inside script tag
@@ -166,6 +206,7 @@ export default class CorkCookieManager extends LitElement {
 
     try {
         const parsedScript = JSON.parse(scriptTag.textContent.trim());
+        console.log('Parsed group rules from script tag:', parsedScript);
         const scriptRules = parsedScript?.groupRules;
 
         const validationResult = this.validateGroupRules(scriptRules);
@@ -184,19 +225,9 @@ export default class CorkCookieManager extends LitElement {
   }
 
   /**
-   * @description Checks if two arrays of group rules are equal.
-   * @param {Array} a - The first array of group rules.
-   * @param {Array} b - The second array of group rules.
-   * @returns {boolean} True if the arrays are equal, false otherwise.
-   */
-  _groupRulesEqual(a, b) {
-        return JSON.stringify(a) === JSON.stringify(b);
-   }
-
-  /**
-   * @description Retrieves all cookies accessible via JavaScript (i.e., non-HttpOnly cookies) and stores them in the `cookies` property. 
-   * To manage HttpOnly cookies, you would need to do so from the server side by sending appropriate Set-Cookie headers.
-   * @returns {void}
+   * @description Retrieves cookies from `document.cookie`, parses them, 
+   * and groups them based on the defined group rules.
+   * @returns {void|Array} The parsed and grouped cookies, or void if no cookies are found.
    */
     getCookies() {
         const allCookies = document.cookie || '';
@@ -243,9 +274,9 @@ export default class CorkCookieManager extends LitElement {
     }
 
     /**
-     * @description Retrieves the parent domain of the current page by extracting the last two segments of the hostname.
-     * @returns {string} The parent domain of the current page and deleted across sub domains
-     */
+     * @description Retrieves the parent domain of the current page by extracting the 
+     * last two segments of the hostname. It also includes checks to skip localhost and IPv4 addresses
+    */
     getParentDomain() {
         const host = window.location.hostname;
 
@@ -270,11 +301,12 @@ export default class CorkCookieManager extends LitElement {
         return `.${parts.slice(-2).join('.')}`;
 
     }   
-    /*
-     * @description Returns the subset of cookie names that are still present in `document.cookie`.
-     * @param {string[]} cookieNames - The cookie names to check.
-     * @returns {string[]}
-     */
+   /**
+     * @description Filters the provided cookie names against the current 
+     * cookies to determine which cookies still exist after a deletion attempt.
+     * @param {Array} cookieNames - An array of cookie names to check for existence.
+     * @returns {Array} An array of cookie names that still exist in `document.cookie`.
+    */
     getRemainingCookieNames(cookieNames) {
         const existingCookieNames = new Set(
             document.cookie
@@ -297,17 +329,12 @@ export default class CorkCookieManager extends LitElement {
         const success = this.refreshCookies(cookieName);
 
         if (!success) {
-            this.showAlert({header: 'Warning: Unable to Remove Cookie', message: 'Cookie could not be removed (domain/path mismatch or HttpOnly): ' + cookieName, timeout: 200, duration: 3000});
+            let alertType = "alert--error";
+            let alertMessage = 'Cookie could not be removed (domain/path mismatch or HttpOnly): ' + cookieName;
+            let alert = {type: alertType, message: alertMessage};
+            this.alerts = [...this.alerts, alert];
+            this.requestUpdate();
         }
-    }
-
-    /**
-     * @description Displays an alert message using the CorkCookieAlert component.
-     * @param {Object} options - An object containing options for the alert, such as `message`, `brandColor`, and `timeout`.
-     */
-    showAlert(options) {
-        const alertElement = this.renderRoot?.querySelector('cork-cookie-alert');
-        alertElement?.onAlert(options);
     }
 
     /**
@@ -333,13 +360,18 @@ export default class CorkCookieManager extends LitElement {
 
 
         if (failed.length) {
-            this.showAlert({header: 'Warning: Unable to Remove Cookies', message: 'Some cookies could not be removed (domain/path mismatch or HttpOnly): ' + failed.join(', '), timeout: 200, duration: 3000});
+            let alertType = "alert--error";
+            let alertMessage = 'Some cookies could not be removed (domain/path mismatch or HttpOnly): ' + failed.join(', ');
+            let alert = {type: alertType, message: alertMessage};
+            this.alerts = [...this.alerts, alert];
+            this.requestUpdate();
         }
 
     }
 
     /**
-     * @description Deletes a cookie by name and sets the cookie's expiration date to a past date and specify the path and domain to ensure proper deletion.
+     * @description Deletes a cookie by setting its expiration date to a past date. 
+     * It attempts to delete the cookie for the current domain
      * @param {string} cookieName - The name of the cookie to delete.
      * @returns {void}
      */
@@ -361,8 +393,9 @@ export default class CorkCookieManager extends LitElement {
     }
 
     /**
-     * @description Refreshes the cookie list after deletion and checks if the specified cookie still exists.
-     * @param {string} cookieNames - The names of the cookies to check for existence after deletion. Can be a single cookie name or an array of cookie names.
+     * @description Refreshes the cookie list after a deletion attempt and checks if the 
+     * specified cookies still exist.
+     * @param {string} cookieNames - The names of the cookies to check for existence after deletion.
      * @returns {boolean} Returns true if the cookie no longer exists, false if it still exists.
      */
     refreshCookies(cookieNames) {
@@ -377,9 +410,11 @@ export default class CorkCookieManager extends LitElement {
     }
 
     /**
-     * @description Validates the structure and content of group rules. 
+     * @description Validates the structure and content of the provided group rules to ensure 
+     * they meet the expected format and contain valid regular expressions.
      * @param {Array} groupRules - The group rules to validate.
-     * @returns {Object} An object containing a `valid` boolean and either a `value` with the validated group rules or an `error` message if validation fails.
+     * @returns {Object} An object containing a boolean `valid` property and either a `value` 
+     * property with the valid group rules or an `error` property with an error message.
      */
     validateGroupRules(groupRules) {
         let error = null;
@@ -443,7 +478,8 @@ export default class CorkCookieManager extends LitElement {
     }
 
     /**
-     * @description Determines the group label for a given cookie based on the defined group rules
+     * @description Checks which group a cookie belongs to based on the defined group rules. 
+     * If no match is found, it defaults to "All Cookies".
      * @param {Object} cookie 
      * @returns {String}
      */    
@@ -460,32 +496,6 @@ export default class CorkCookieManager extends LitElement {
         }
         return {groupName: "all-cookies", groupLabel: "All Cookies"};
     } 
-
-    /**
-     * @description Lifecycle method called when the component is added to the DOM. It calls the `connectedCallback` of the parent class to ensure proper lifecycle management.
-     * @returns {void}
-    */
-    connectedCallback() {
-        super.connectedCallback();
-
-    }
-
-
-
-
- 
-    /**
-     * @description Lifecycle method called when the component is removed from the DOM. It disconnects the MutationObserver to prevent memory leaks and calls the `disconnectedCallback` of the parent class.
-     * @returns {void}
-    */
-    disconnectedCallback() {
-        super.disconnectedCallback();
-
-        if (this._cookieManagerObserver) {
-            this._cookieManagerObserver.disconnect();
-            this._cookieManagerObserver = null;
-        }
-  }
 
 }
 

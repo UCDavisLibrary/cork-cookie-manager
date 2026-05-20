@@ -1,7 +1,11 @@
 import { LitElement } from 'lit';
 import {render, styles} from './cork-test-cookies.tpl.js';
 
-
+/**
+ * @description A development-only element that creates test cookies for demonstration purposes. 
+ * It includes both host-only cookies and parent-domain cookies to allow testing of cookie deletion across different scopes.
+ * This element should only be used in development environments and should not be included in production builds.
+ */
 export default class CorkTestCookies extends LitElement {
 
   static get properties() {
@@ -81,5 +85,3 @@ export default class CorkTestCookies extends LitElement {
     }   
 
 }
-
-customElements.define('cork-test-cookies', CorkTestCookies);
