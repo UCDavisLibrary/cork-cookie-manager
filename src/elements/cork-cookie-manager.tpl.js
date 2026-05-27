@@ -1,13 +1,15 @@
 import {html, css} from 'lit';
 import baseStyles from '@ucd-lib/theme-sass/1_base_html/_index.css.js';
 import baseClassStyles from '@ucd-lib/theme-sass/2_base_class/_index.css.js';
-import baseComponent from '@ucd-lib/theme-sass/4_component/_index.css.js';
+import baseAlignablePromo from '@ucd-lib/theme-sass/4_component/_alignable-promo.css.js';
+import baseCategoryBrand from '@ucd-lib/theme-sass/4_component/_category-brand.css.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-collapse/ucd-theme-collapse.js';
 
 export function styles() {
     const elementStyles = css`
         :host {
             display: block;
+            container-type: inline-size;
         }
 
         .alert {            
@@ -104,7 +106,7 @@ export function styles() {
             word-break: break-word;
         }
 
-        @media (max-width: 580px) {
+        @container (max-width: 580px) {
             .mobile-label {
                 display: inline-block;
             }
@@ -169,7 +171,13 @@ export function styles() {
         }
     `;
 
-    return [baseStyles, baseClassStyles, baseComponent, elementStyles];
+    return [
+            baseStyles, 
+            baseClassStyles, 
+            baseAlignablePromo, 
+            baseCategoryBrand, 
+            elementStyles
+           ];
 }
 
 

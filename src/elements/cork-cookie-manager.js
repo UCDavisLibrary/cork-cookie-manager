@@ -74,7 +74,7 @@ export default class CorkCookieManager extends LitElement {
   }
 
     /*
-        * Lifecycle method called after the component's DOM has been updated for the first time.
+    * Lifecycle method called after the component's DOM has been updated for the first time.
     */
     firstUpdated() {
         this.runCookieManager();
@@ -100,7 +100,11 @@ export default class CorkCookieManager extends LitElement {
   */
   willUpdate(changedProperties) {
         if (changedProperties.has('groupRules')) {
-            const rawRules = this.groupRules ?? this.defaultGroupRules;
+            const validationResult = this.validateGroupRules(this.groupRules);
+            const rawRules = validationResult.valid 
+                                ? validationResult.value 
+                                : this.defaultGroupRules;
+
             this._groupRules = this._compileGroupRules(rawRules);
             this.getCookies(); 
         }
