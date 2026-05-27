@@ -1,5 +1,5 @@
 {
-  "name": "@ucdlib/cork-cookie-manager",
+  "name": "@ucd-lib/cork-cookie-manager",
   "version": "1.0.0",
   "description": "Lit web component for managing browser cookies",
   "main": "./browser.js",
@@ -9,7 +9,6 @@
     "elements/"
   ],
   "dependencies": {
-    "@ucd-lib/cork-app-utils": "^6.4.2",
     "@ucd-lib/theme-elements": "^3.5.0",
     "@ucd-lib/theme-sass": "^6.0.1"
   },

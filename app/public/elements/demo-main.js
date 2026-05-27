@@ -2,7 +2,6 @@ import { LitElement } from 'lit';
 import {render, styles} from './demo-main.tpl.js';
 
 import { Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins/index.js';
-import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
 /**
  * @description Main demo element for cookie manager. 
@@ -10,7 +9,7 @@ import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
  * and just the cookie manager in production.
  */
 export default class DemoMain extends Mixin(LitElement)
-  .with(LitCorkUtils, MainDomElement) {
+  .with(MainDomElement) {
 
   static get properties() {
     return {
@@ -35,6 +34,11 @@ export default class DemoMain extends Mixin(LitElement)
           "name": "googleAnalytics",
           "label": "Google Analytics",
           "patterns": ["^_ga", "^_gid", "^_gat", "^_ga_"]
+        },
+        {
+          "name": "wordpress",
+          "label": "Wordpress",
+          "patterns": ["^wp-"]
         },
         {
           "name": "attributeOther",

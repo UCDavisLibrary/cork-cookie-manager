@@ -29,7 +29,15 @@ export function render() {
     ${this.isDev ? html`
         <cork-test-cookies .parentDomain="${this.parentDomain}"></cork-test-cookies>
     ` : ''}  
+    <!--
     <cork-cookie-manager is-dev="${this.isDev}" .groupRules="${this.groupRules}" .parentDomain="${this.parentDomain}">
+    </cork-cookie-manager>
+    -->
+
+    <cork-cookie-manager is-dev="${this.isDev}" .parentDomain="${this.parentDomain}">
+        <script type="application/json">
+            ${JSON.stringify({groupRules: this.groupRules})}
+        </script>
     </cork-cookie-manager>
 
         
