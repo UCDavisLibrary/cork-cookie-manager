@@ -1,11 +1,6 @@
-import '@ucd-lib/theme-elements/brand/ucd-theme-primary-nav/ucd-theme-primary-nav.js';
-import '@ucd-lib/theme-elements/brand/ucd-theme-header/ucd-theme-header.js';
-import '@ucd-lib/theme-elements/ucdlib/ucdlib-branding-bar/ucdlib-branding-bar.js';
-import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js';
-import '@ucd-lib/theme-elements/brand/ucd-theme-search-popup/ucd-theme-search-popup.js';
-import '@ucd-lib/theme-elements/brand/ucd-theme-search-form/ucd-theme-search-form.js';
-import '@ucd-lib/theme-elements/brand/ucd-theme-quick-links/ucd-theme-quick-links.js';
-import '../../../src/elements/cork-cookie-manager.js';
+import { rules } from '../../../src/browser.js';
+import CorkTestCookies from '../../../src/elements/cork-test-cookies.js';
+customElements.define('cork-test-cookies', CorkTestCookies);
 
 import {html, css} from 'lit';
 
@@ -22,31 +17,20 @@ export function styles() {
 export function render() {
     return html`
 
-    <ucd-theme-header
-        prevent-fixed
-        is-demo>
 
-        <ucdlib-branding-bar>
-            <a href="#">My Account</a>
-            <a href="#">Access VPN</a>
-            <a href="#">Give</a>
-        </ucdlib-branding-bar>
 
-        <ucd-theme-primary-nav>
-            <ul link-text="Cookie Manager" href="#">
-            <li><a href="#">Instructions</a></li>
-            <li><a href="#">Application</a></li>
-            </ul>
-        </ucd-theme-primary-nav>
-
-        <ucd-theme-search-popup>
-            <ucd-theme-search-form
-            @search="e=>console.log(e.detail.searchTerm)">
-            </ucd-theme-search-form>
-        </ucd-theme-search-popup>
-
-    </ucd-theme-header>
-    <cork-cookie-manager></cork-cookie-manager>
+    <h1>${rules.length} Exported Rule(s):</h1>
+    ${rules.map(rule => html`
+        <div>
+            <h2>${rule.label}</h2>
+            <p><strong>Patterns:</strong> ${rule.patterns.join(', ')}</p>
+        </div>
+    `)}
+    ${this.isDev ? html`
+        <cork-test-cookies .parentDomain="${this.parentDomain}"></cork-test-cookies>
+    ` : ''}  
+    <cork-cookie-manager is-dev="${this.isDev}" .groupRules="${this.groupRules}" .parentDomain="${this.parentDomain}">
+    </cork-cookie-manager>
 
         
     `;
